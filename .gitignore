@@ -12,3 +12,5 @@ pom.xml.asc
 .idea/
 .mach
 kixi.collect.iml
+aws-variables.env
+/test-resources/metadata*
