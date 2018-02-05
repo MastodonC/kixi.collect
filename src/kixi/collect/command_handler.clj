@@ -105,6 +105,5 @@
 (defn create-request-collection-handler
   [directory]
   (fn [{:keys [kixi/user ::ms/id] :as cmd}]
-    (if-let [v (valid-command? cmd)]
-      v
-      (create-request-collection-handler-inner directory (datastore/get-metadata user directory id) cmd))))
+    (or (valid-command? cmd)
+        (create-request-collection-handler-inner directory (datastore/get-metadata user directory id) cmd))))
