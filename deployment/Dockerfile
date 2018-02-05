@@ -15,6 +15,6 @@ ENV CONFIG_PROFILE=${environment}
 ADD target/kixi.collect-standalone.jar /srv/kixi.collect.jar
 ADD scripts/run.sh /etc/service/kixi.collect/run
 
-EXPOSE 8080/tcp
+EXPOSE 8083/tcp
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
