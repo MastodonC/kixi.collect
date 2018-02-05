@@ -27,4 +27,4 @@
   (is (nil? (check `cch/create-request-collection-handler-inner))))
 
 (deftest check-valid-command
-  (is (nil? (check `cch/valid-command?))))
+  (is (nil? (check `cch/check-valid-command))))

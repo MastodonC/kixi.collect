@@ -83,7 +83,7 @@
       :else
       (create-collection-request cmd))))
 
-(s/fdef valid-command?
+(s/fdef check-valid-command
         :args (s/cat :command (s/or :invalid-cmd (s/keys)
                                     :valid-cmd :kixi/command))
         :fn (fn [{{:keys [command]} :args
@@ -97,7 +97,7 @@
                                         :options (s/keys :req-un [:kixi.comms/partition-key]))
                    :nil nil?))
 
-(defn valid-command?
+(defn check-valid-command
   [{:keys [::ms/id] :as cmd}]
   (when-not (s/valid? :kixi/command cmd)
     (reject-collection-request :invalid-cmd id (with-out-str (s/explain :kixi/command cmd)))))
@@ -105,5 +105,5 @@
 (defn create-request-collection-handler
   [directory]
   (fn [{:keys [kixi/user ::ms/id] :as cmd}]
-    (or (valid-command? cmd)
+    (or (check-valid-command cmd)
         (create-request-collection-handler-inner directory (datastore/get-metadata user directory id) cmd))))
