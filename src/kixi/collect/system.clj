@@ -9,7 +9,7 @@
              [log :as kixi-log]]
             [kixi.comms.components.kinesis :as kinesis]
             [kixi.comms.components.coreasync :as coreasync]
-            [kixi.collect.ses :as m]
+            [kixi.collect.collector :as c]
             [kixi.collect.web :as w]
             [taoensso.timbre :as log]))
 
@@ -30,7 +30,7 @@
    :communications (case (first (keys (:communications config)))
                      :kinesis (kinesis/map->Kinesis {})
                      :coreasync (coreasync/map->CoreAsync {}))
-   :collect (m/map->Mailer (select-keys config [:directory]))
+   :collect (c/map->CollectAndShare (select-keys config [:directory]))
    :web (w/map->Web {})))
 
 (defn raise-first
@@ -47,8 +47,7 @@
   (merge-with merge
               system
               (-> config
-                  (raise-first :communications)
-                  (raise-first :collect))))
+                  (raise-first :communications))))
 
 (defn configure-logging
   [config]

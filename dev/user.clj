@@ -4,15 +4,17 @@
             [environ.core :refer [env]]))
 
 (defonce system (atom nil))
+(defonce profile (atom nil))
 
 (defn start
   ([]
    (start {} nil))
   ([overrides component-subset]
    (when-not @system
+     (reset! profile (keyword (env :system-profile "local")))
      (try
        (prn "Starting system")
-       (->> (sys/new-system (keyword (env :system-profile "local")))
+       (->> (sys/new-system @profile)
             (#(merge % overrides))
             (#(if component-subset
                 (select-keys % component-subset)
