@@ -1,36 +1,40 @@
 (ns user
   (:require [com.stuartsierra.component :as component]
-            [kixi.collect.system :as sys]
+            [kixi.collect.system :as system]
+            [kixi.collect.application :as app]
             [environ.core :refer [env]]))
-
-(defonce system (atom nil))
-(defonce profile (atom nil))
 
 (defn start
   ([]
    (start {} nil))
   ([overrides component-subset]
-   (when-not @system
-     (reset! profile (keyword (env :system-profile "local")))
-     (try
-       (prn "Starting system")
-       (->> (sys/new-system @profile)
-            (#(merge % overrides))
-            (#(if component-subset
-                (select-keys % component-subset)
-                %))
-            component/start-system
-            (reset! system))
-       (catch Exception e
-         (reset! system (:system (ex-data e)))
-         (throw e))))))
+   (start "config.edn" "local"
+          {:overrides overrides
+           :component-subset component-subset}))
+  ([config-location profile options]
+   (let [{:keys [overrides component-subset]} options]
+     (when-not @app/system
+       (reset! app/profile (keyword (env :system-profile profile)))
+       (reset! app/config-location config-location)
+       (try
+         (println "Starting system" profile)
+         (->> (system/new-system config-location (keyword (env :system-profile profile)))
+              (#(merge % overrides))
+              (#(if component-subset
+                  (select-keys % component-subset)
+                  %))
+              component/start-system
+              (reset! app/system))
+         (catch Exception e
+           (reset! app/system (:system (ex-data e)))
+           (throw e)))))))
 
 (defn stop
   []
-  (when @system
-    (prn "Stopping system")
-    (component/stop-system @system)
-    (reset! system nil)))
+  (when @app/system
+    (println "Stopping system")
+    (component/stop-system @app/system)
+    (reset! app/system nil)))
 
 (defn restart
   []

@@ -9,6 +9,7 @@
             [clojure.java.io :as io]
             [kixi.comms :as c]
             [kixi.spec :as sh]
+            [kixi.collect.application :as app]
             [kixi.collect.system :as system]
             [user :as user]
             [clojure data
@@ -19,6 +20,7 @@
 
 (sh/alias 'ms 'kixi.datastore.metadatastore)
 (sh/alias 'ss 'kixi.datastore.schemastore)
+(sh/alias 'cr 'kixi.collect.request)
 
 (def wait-tries (Integer/parseInt (env :wait-tries "300")))
 (def wait-per-try (Integer/parseInt (env :wait-per-try "100")))
@@ -31,10 +33,18 @@
 
 (def comms (atom nil))
 (def event-channel (atom nil))
+(def collection-request-aggregate (atom nil))
+(def campaign-aggregate (atom nil))
 
 (defn uuid
   []
   (str (java.util.UUID/randomUUID)))
+
+(defn random-uuid-set
+  ([]
+   (random-uuid-set 10))
+  ([n]
+   (set (repeatedly (inc (rand-int n)) uuid))))
 
 (defn vec-if-not
   [x]
@@ -84,7 +94,7 @@
   (try (stest/instrument)
        (all-tests)
        (finally
-         (let [kinesis-conf (select-keys (:communications @user/system)
+         (let [kinesis-conf (select-keys (:communications @app/system)
                                          [:endpoint :dynamodb-endpoint :streams
                                           :profile :app])]
            (user/stop)
@@ -109,7 +119,7 @@
 
 (defn extract-comms
   [all-tests]
-  (reset! comms (:communications @user/system))
+  (reset! comms (:communications @app/system))
   (let [_ (reset! event-channel (async/chan 100))
         handler-1 (c/attach-event-with-key-handler!
                    @comms
@@ -130,6 +140,19 @@
         (reset! event-channel nil))))
   (reset! comms nil))
 
+(defn extract-collection-request-aggregate
+  [all-tests]
+  (reset! collection-request-aggregate
+          (:collect-request-aggregate @app/system))
+  (all-tests)
+  (reset! collection-request-aggregate nil))
+
+(defn extract-campaign-aggregate
+  [all-tests]
+  (reset! campaign-aggregate
+          (:campaign-aggregate @app/system))
+  (all-tests)
+  (reset! campaign-aggregate nil))
 
 (defn event-for
   [uid event]
@@ -174,7 +197,7 @@
 (defn datastore-url
   []
   (let [{:keys [host port]}
-        (:datastore (:directory (system/config (or @user/profile :local))))]
+        (:datastore (:directory (system/config "config.edn" (or @app/profile :local))))]
     (str host ":" port)))
 
 (defn metadata-query-url
@@ -351,6 +374,7 @@
         p (io/file (.getParent t))]
     (when-not (.exists p)
       (println "upload-file:" p "doesn't exist so we're going to create it:" (.mkdir p)))
+    (println "Copying" file-name "to" target)
     (io/copy (io/file file-name)
              (doto t (.createNewFile)))))
 
@@ -501,17 +525,28 @@
   (let [datapack-response (send-datapack uid "Empty Datapack" #{})]
     datapack-response))
 
-(defn send-collection-request-cmd
+(defn send-request-cmd
   ([uid message groups bid]
-   (send-collection-request-cmd uid uid message groups bid))
+   (send-request-cmd uid uid message groups bid))
   ([uid ugroup message groups bid]
    (c/send-valid-command!
     @comms
     {::cmd/type :kixi.collect/request-collection
      ::cmd/version "1.0.0"
-     :kixi.collect/message message
-     :kixi.collect/groups groups
+     ::cr/message message
+     ::cr/groups groups
      ::ms/id bid
      :kixi/user {:kixi.user/id uid
                  :kixi.user/groups (vec-if-not ugroup)}}
     {:partition-key uid})))
+
+(defn send-collection-request
+  [uid message groups]
+  (let [dr (empty-datapack uid)]
+    (when-success dr
+      (send-request-cmd uid message groups (get-in dr [:body ::ms/id]))
+      (let [event (wait-for-events uid :kixi.collect/collection-requested)]
+        (is (= message (::cr/message event)))
+        (is (= groups (set (keys (::cr/group-collection-requests event)))))
+        (is (= (get-in dr [:body ::ms/id]) (::ms/id event)))
+        event))))

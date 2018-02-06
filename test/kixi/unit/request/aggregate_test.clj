@@ -1,11 +1,15 @@
-(ns kixi.unit.collector-test
+(ns kixi.unit.request.aggregate-test
   {:unit true}
-  (:require [kixi.collect.command-handler :as cch]
-            [kixi.collect.datastore :as datastore]
+  (:require [kixi.collect.request.aggregate :as agr]
+            [kixi.spec :refer [alias]]
+            [kixi.collect.request.events]
             [clojure.spec.alpha :as s]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
+            [clojure.spec.gen.alpha :as gen]
             [clojure.test.check :as tc]))
+
+(alias 'cr 'kixi.collect.request)
 
 (def sample-size 100)
 
@@ -23,8 +27,8 @@
 (s/def :kixi.command/type types)
 (s/def :kixi.command/version versions)
 
-(deftest check-create-delete-file-handler-inner
-  (is (nil? (check `cch/create-request-collection-handler-inner))))
+(deftest check-create-request-collection-handler-inner
+  (is (nil? (check `agr/create-request-collection-handler-inner))))
 
 (deftest check-valid-command
-  (is (nil? (check `cch/check-valid-command))))
+  (is (nil? (check `agr/check-valid-command))))
