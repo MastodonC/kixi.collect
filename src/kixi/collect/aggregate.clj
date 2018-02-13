@@ -9,7 +9,7 @@
   (fn [event]
     (let [handler (handle-event-fn event)]
       (if (satisfies? IAggregateEventDataHandler handler)
-        (let [input  (get handler event)
-              output (process-event-fn input event)]
+        (let [aggregated-data (get handler event)
+              output (process-event-fn aggregated-data event)]
           (put! handler event output))
         (throw (ex-info (str "Event handler does not satisfy IAggregateEventDataHandler") {:handler handler}))))))
