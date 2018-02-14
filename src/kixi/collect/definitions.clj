@@ -1,4 +1,4 @@
-(ns kixi.collect.request.events
+(ns kixi.collect.definitions
   (:require [clojure.spec.alpha :as s]
             [kixi.collect.request.spec]
             [kixi.collect.campaign.spec]
@@ -9,6 +9,20 @@
 (alias 'cc 'kixi.collect.campaign)
 (alias 'ms 'kixi.datastore.metadatastore)
 (alias 'c-reject 'kixi.collect.request.rejection)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Commands
+
+(defmethod comms/command-payload
+  [:kixi.collect/request-collection "1.0.0"]
+  [_]
+  (s/keys :req [::cr/message
+                ::cr/groups
+                ::ms/id]))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Events
 
 (defmethod comms/event-payload
   [:kixi.collect/collection-requested "1.0.0"]
@@ -32,3 +46,12 @@
   (s/keys :req [::c-reject/reason]
           :opt [::c-reject/message
                 ::ms/id]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Commands -> Events
+
+(defmethod comms/command-type->event-types
+  [:kixi.collect/request-collection "1.0.0"]
+  [_]
+  #{[:kixi.collect/collection-requested "1.0.0"]
+    [:kixi.collect/collection-request-rejected "1.0.0"]})

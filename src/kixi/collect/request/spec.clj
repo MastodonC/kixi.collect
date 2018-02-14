@@ -33,14 +33,6 @@
                 ::cr/response-ids
                 ::ms/id]))
 
-(defmethod comms/command-type->event-types
-  [:kixi.collect/request-collection "1.0.0"]
-  [_]
-  #{[:kixi.collect/collection-requested "1.0.0"]
-    [:kixi.collect/collection-request-rejected "1.0.0"]})
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Instead of sending a file straight to datastore with `add-file-to-bundle`
 ;; we send command to C+S along the lines of `submit-response`

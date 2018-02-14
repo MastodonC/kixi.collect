@@ -3,6 +3,7 @@
             [kixi.spec :refer [alias]]
             [kixi.spec.conformers :as sc]
             [kixi.comms.time :as t]
+            [kixi.collect.definitions]
             [kixi.collect.datastore :as datastore]
             [kixi.collect.aggregate :as agr]))
 

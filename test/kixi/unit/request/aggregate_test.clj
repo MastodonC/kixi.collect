@@ -2,7 +2,7 @@
   {:unit true}
   (:require [kixi.collect.request.aggregate :as agr]
             [kixi.spec :refer [alias]]
-            [kixi.collect.request.events]
+            [kixi.collect.definitions]
             [clojure.spec.alpha :as s]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]

@@ -1,10 +1,9 @@
 (ns kixi.collect.request.aggregate
   (:require [clojure.spec.alpha :as s]
-            [kixi.collect.request.commands]
-            [kixi.collect.request.events]
             [kixi.spec :refer [alias]]
             [kixi.spec.conformers :as sc]
             [kixi.comms.time :as t]
+            [kixi.collect.definitions]
             [kixi.collect.datastore :as datastore]
             [kixi.collect.aggregate :as agr]))
 

@@ -9,14 +9,13 @@
             [kixi.spec :as sh]))
 
 (sh/alias 'cc 'kixi.collect.campaign)
-(sh/alias 'ms 'kixi.datastore.metadatastore)
 
 (use-fixtures :once
   cycle-system-fixture
   extract-comms
   extract-campaign-aggregate)
 
-(deftest happy-collect-request-campaign
+(deftest happy-campaign
   (let [uid (uuid)
         message "happy"
         groups (random-uuid-set)]
