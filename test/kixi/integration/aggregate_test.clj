@@ -45,9 +45,9 @@
             (create-metadata
              uid
              "./test-resources/metadata-one-valid.csv"))
-        message "unauthorised"
+        message "incorrect type"
         groups (random-uuid-set)]
     (when-success dr
       (send-request-cmd uid message groups (get-in dr [:body ::ms/id]))
-      (let [event (wait-for-events uid :kixi.collect/request-rejected)]
+      (let [event (wait-for-events uid :kixi.collect/collection-request-rejected)]
         (is (= :incorrect-type (:kixi.collect.request.rejection/reason event)))))))
