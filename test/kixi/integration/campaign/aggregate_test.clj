@@ -10,14 +10,16 @@
 
 (sh/alias 'cc 'kixi.collect.campaign)
 
+(def campaign-aggregate (atom nil))
+
 (use-fixtures :once
   (cycle-system-fixture {:spec {:kixi.event/type #{:kixi.collect/collection-requested}}})
-  extract-comms
-  extract-campaign-aggregate)
+  (extract-component :campaign-aggregate campaign-aggregate)
+  extract-comms)
 
 (deftest happy-campaign
   (let [uid (uuid)
-        message "happy"
+        message "happy campaign"
         groups (random-uuid-set)]
     (when-let [event (send-collection-request uid message groups)]
       ;; check the campaign made it into the aggregate

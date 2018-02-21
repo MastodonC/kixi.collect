@@ -59,8 +59,8 @@
          :kixi.collect/collection-requested
          "1.0.0"
          (agrc/aggregate-event-handler (partial handle-event event-handler-opts)))
-        (assoc component :client client)))
-    component)
+        (assoc component :client client))
+      component))
   (stop [component]
     (log/info "Stopping Campaign DynamoDb Aggregate")
     component)

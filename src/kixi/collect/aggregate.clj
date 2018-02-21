@@ -27,6 +27,7 @@
 
 (defn aggregate-event-handler-inner
   [create-event-data-handler-fn process-event-fn event]
+  (println (:kixi.event/type event))
   (let [handler (create-event-data-handler-fn event)]
     (if (satisfies-event-data-handler? handler)
       (let [aggregated-data (get handler event)

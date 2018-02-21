@@ -1,5 +1,7 @@
 (ns kixi.collect.test-spec
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [kixi.collect.process-manager.collection-request]
+            [kixi.collect.definitions]))
 
 (def c-types    (set (map first  (keys (methods kixi.comms/command-payload)))))
 (def c-versions (set (map second (keys (methods kixi.comms/command-payload)))))
