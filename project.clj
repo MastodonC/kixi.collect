@@ -6,7 +6,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[aero "1.0.0"]
-                 [aleph "0.4.2-alpha8"]
+                 [aleph "0.4.5-alpha4"]
                  [bidi "2.0.12"]
                  [clj-http "3.7.0"]
                  [com.amazonaws/aws-java-sdk "1.11.253" :exclusions [joda-time]]
