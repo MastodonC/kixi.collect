@@ -3,7 +3,7 @@
             [kixi.spec :refer [alias]]
             [kixi.spec.conformers :as sc]
             [kixi.comms.time :as t]
-            [kixi.collect.definitions]
+            [kixi.collect.definitions :refer [event-type-version-pair command-type-version-pair]]
             [kixi.collect.datastore :as datastore]
             [kixi.collect.aggregate :as agr]))
 
@@ -60,7 +60,7 @@
 (defn rejected-event?
   [event]
   (= [:kixi.collect/collection-request-rejected "1.0.0"]
-     ((juxt ::event/type ::event/version) event)))
+     (event-type-version-pair event)))
 
 (s/fdef create-request-collection-handler-inner
         :args (s/cat :dir (s/keys)
@@ -69,7 +69,7 @@
                      :label-command (s/or :invalid-cmd :kixi/command
                                           :valid-cmd (s/and :kixi/command
                                                             #(= [:kixi.collect/request-collection "1.0.0"]
-                                                                ((juxt ::command/type ::command/version) %)))))
+                                                                (command-type-version-pair %)))))
         :fn (fn [{{:keys [label-command label-bundle]} :args
                   {:keys [event options]} :ret}]
               (let [[_ command] label-command
@@ -129,7 +129,7 @@
 ;; EVENTS
 
 (defmulti process-event
-  (fn [_ e] ((juxt ::event/type ::event/version) e)))
+  (fn [_ e] (event-type-version-pair e)))
 
 (defmethod process-event
   [:kixi.collect/collection-requested "1.0.0"]

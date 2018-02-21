@@ -6,15 +6,15 @@
             [clojure.spec.gen.alpha :as gen]
             [clojure.test.check :as tc]))
 
-(def sample-size 100)
-
 (defn check
-  [sym]
-  (-> sym
-      (stest/check {:clojure.spec.test.alpha.check/opts {:num-tests sample-size}})
-      first
-      stest/abbrev-result
-      :failure))
+  ([sym]
+   (check 100))
+  ([sym samples]
+   (-> sym
+       (stest/check {:clojure.spec.test.check/opts {:num-tests samples}})
+       first
+       stest/abbrev-result
+       :failure)))
 
 (def c-types    (set (map first  (keys (methods kixi.comms/command-payload)))))
 (def c-versions (set (map second (keys (methods kixi.comms/command-payload)))))

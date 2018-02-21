@@ -11,6 +11,12 @@
 (alias 'c-reject 'kixi.collect.request.rejection)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helper fns
+
+(def event-type-version-pair (juxt :kixi.event/type :kixi.event/version))
+(def command-type-version-pair (juxt :kixi.command/type :kixi.command/version))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commands
 
 (defmethod comms/command-payload

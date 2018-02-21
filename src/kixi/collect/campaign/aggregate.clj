@@ -2,10 +2,10 @@
   (:require [clojure.spec.alpha :as s]
             [kixi.spec :refer [alias]]
             [kixi.spec.conformers :as sc]
-            [kixi.comms.time :as t]
             [kixi.collect.definitions]
             [kixi.collect.datastore :as datastore]
-            [kixi.collect.aggregate :as agr]))
+            [kixi.collect.aggregate :as agr]
+            [kixi.collect.definitions :refer [event-type-version-pair]]))
 
 (alias 'event 'kixi.event)
 (alias 'cr 'kixi.collect.request)
@@ -24,7 +24,7 @@
 (s/fdef process-collection-requested-event
         :args (s/cat :event (s/and :kixi/event
                                    #(= [:kixi.collect/collection-requested "1.0.0"]
-                                       ((juxt ::event/type ::event/version) %))))
+                                       (event-type-version-pair %))))
         :fn (fn [{{:keys [event]} :args
                   db-item :ret}]
               (and (= (::cc/id event) (::cc/id db-item))
@@ -32,9 +32,7 @@
                    (= (::ms/id event) (::ms/id db-item))
                    (= (set (vals (::cr/group-collection-requests event))) (::cr/ids db-item))
                    (= (:kixi.user/id (::cr/sender event)) (::cr/requester-id db-item))
-                   (if (:kixi.event/created-at event)
-                     (= (:kixi.event/created-at event) (::cc/created-at db-item))
-                     true)))
+                   (= (:kixi.event/created-at event) (::cc/created-at db-item))))
         :ret ::cc/db-item)
 
 (defn process-collection-requested-event
@@ -43,7 +41,7 @@
            ::cr/group-collection-requests
            :kixi.event/created-at] :as event}]
   {::cc/id (::cc/id event)
-   ::cc/created-at (or created-at (t/timestamp))
+   ::cc/created-at created-at
    ::cr/requester-id (:kixi.user/id sender)
    ::cr/message message
    ::cr/ids (set (vals group-collection-requests))
@@ -52,7 +50,7 @@
 ;;
 
 (defmulti process-event
-  (fn [_ e] ((juxt ::event/type ::event/version) e)))
+  (fn [_ e] (event-type-version-pair e)))
 
 (defmethod process-event
   [:kixi.collect/collection-requested "1.0.0"]
