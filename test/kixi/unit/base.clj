@@ -8,7 +8,7 @@
 
 (defn check
   ([sym]
-   (check 100))
+   (check sym 100))
   ([sym samples]
    (-> sym
        (stest/check {:clojure.spec.test.check/opts {:num-tests samples}})
