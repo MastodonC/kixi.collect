@@ -55,7 +55,7 @@
         ;;
         (comms/attach-validating-event-handler!
          communications
-         :kixi.collect/collection-requested-handler
+         :kixi.collect/campaign-aggregate-collection-requested-handler
          :kixi.collect/collection-requested
          "1.0.0"
          (agrc/aggregate-event-handler (partial handle-event event-handler-opts)))

@@ -11,7 +11,7 @@
 (sh/alias 'cr 'kixi.collect.request)
 
 (use-fixtures :once
-  cycle-system-fixture
+  (cycle-system-fixture {:spec {:kixi.event/type #{:kixi.collect/collection-requested}}})
   extract-comms
   extract-collection-request-aggregate)
 

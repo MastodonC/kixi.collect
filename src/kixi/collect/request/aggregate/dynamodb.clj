@@ -59,14 +59,14 @@
         ;;
         (comms/attach-validating-command-handler!
          communications
-         :kixi.collect/request-collection-handler
+         :kixi.collect/request-aggregate-request-collection-handler
          :kixi.collect/request-collection
          "1.0.0"
          (agrr/create-request-collection-handler directory))
         ;;
         (comms/attach-validating-event-handler!
          communications
-         :kixi.collect/collection-requested-handler
+         :kixi.collect/request-aggregate-collection-requested-handler
          :kixi.collect/collection-requested
          "1.0.0"
          (agrr/aggregate-event-handler (partial handle-event event-handler-opts)))

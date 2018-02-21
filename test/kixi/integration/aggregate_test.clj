@@ -10,7 +10,7 @@
 (sh/alias 'ms 'kixi.datastore.metadatastore)
 
 (use-fixtures :once
-  cycle-system-fixture
+  (cycle-system-fixture)
   extract-comms)
 
 ;; This is tripping `valid-command?` instrumentation at the moment.

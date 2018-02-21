@@ -9,6 +9,7 @@
             [clojure.java.io :as io]
             [kixi.comms :as c]
             [kixi.spec :as sh]
+            [kixi.collect.test-spec]
             [kixi.collect.application :as app]
             [kixi.collect.system :as system]
             [user :as user]
@@ -87,18 +88,24 @@
     (kinesis/delete-streams! {:endpoint endpoint} (vals streams))))
 
 (defn cycle-system-fixture
-  [all-tests]
-  (if run-against-staging
-    (user/start {} [:communications])
-    (user/start))
-  (try (stest/instrument)
-       (all-tests)
-       (finally
-         (let [kinesis-conf (select-keys (:communications @app/system)
-                                         [:endpoint :dynamodb-endpoint :streams
-                                          :profile :app])]
-           (user/stop)
-           (tear-down-kinesis kinesis-conf)))))
+  ([]
+   (cycle-system-fixture nil))
+  ([opts]
+   (fn [all-tests]
+     (if run-against-staging
+       (user/start {} [:communications])
+       (user/start))
+     (try (if opts
+            (stest/instrument opts)
+            (stest/instrument))
+          (all-tests)
+          (finally
+            (let [kinesis-conf (select-keys (:communications @app/system)
+                                            [:endpoint :dynamodb-endpoint :streams
+                                             :profile :app])]
+              (user/stop)
+              (tear-down-kinesis kinesis-conf)
+              (stest/unstrument)))))))
 
 (defn cycle-system-fixture-local-comms
   [all-tests]
@@ -106,10 +113,12 @@
     (user/start {} [:communications])
     (user/start {:communications (coreasync/map->CoreAsync
                                   {:profile profile})} nil))
-  (try (stest/instrument)
-       (all-tests)
-       (finally
-         (user/stop))))
+  (try
+    (stest/instrument)
+    (all-tests)
+    (finally
+      (user/stop)
+      (stest/unstrument))))
 
 (defn sink-to
   [a]
