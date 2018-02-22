@@ -1,34 +1,17 @@
-(ns kixi.integration.collector-test
+(ns kixi.integration.aggregate-test
   {:integration true}
   (:require [clj-http.client :as client]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
+            [clojure.spec.alpha :as s]
             [kixi.integration.base :refer :all]
-            [kixi.spec :as sh]
-            [kixi.collect.command-handler :as cch]))
+            [kixi.spec :as sh]))
 
-(sh/alias 'c 'kixi.collect)
 (sh/alias 'ms 'kixi.datastore.metadatastore)
 
-(defn random-uuid-set
-  ([]
-   (random-uuid-set 10))
-  ([n]
-   (set (repeatedly (inc (rand-int n)) uuid))))
-
-(use-fixtures :once cycle-system-fixture extract-comms)
-
-(deftest happy-collect-request
-  (let [uid (uuid)
-        dr (empty-datapack uid)
-        message "happy"
-        groups (random-uuid-set)]
-    (when-success dr
-      (send-collection-request-cmd uid message groups (get-in dr [:body ::ms/id]))
-      (let [event (wait-for-events uid :kixi.collect/collection-requested)]
-        (is (= message (::c/message event)))
-        (is (= groups (::c/groups event)))
-        (is (= (get-in dr [:body ::ms/id]) (::ms/id event)))))))
+(use-fixtures :once
+  (cycle-system-fixture)
+  extract-comms)
 
 ;; This is tripping `valid-command?` instrumentation at the moment.
 ;; Not entirely sure why instrumentation is being applied to it though!
@@ -41,8 +24,8 @@
           groups (random-uuid-set)]
       (when-success dr
         (with-redefs [clojure.spec.alpha/valid? (constantly true)]
-          (send-collection-request-cmd uid message groups (get-in dr [:body ::ms/id])))
-        (let [event (wait-for-events uid :kixi.collect/collection-request-rejected)]
+          (send-request-cmd uid message groups (get-in dr [:body ::ms/id])))
+        (let [event (wait-for-events uid :kixi.collect/request-rejected)]
           (is (= :invalid-cmd (:kixi.event.collect.rejection/reason event)))))))
 
 (deftest collect-request-unauthorised
@@ -52,9 +35,9 @@
         message "unauthorised"
         groups (random-uuid-set)]
     (when-success dr
-      (send-collection-request-cmd uid2 message groups (get-in dr [:body ::ms/id]))
+      (send-request-cmd uid2 message groups (get-in dr [:body ::ms/id]))
       (let [event (wait-for-events uid2 :kixi.collect/collection-request-rejected)]
-        (is (= :unauthorised (:kixi.event.collect.rejection/reason event)))))))
+        (is (= :unauthorised (:kixi.collect.request.rejection/reason event)))))))
 
 (deftest collect-request-incorrect-type
   (let [uid (uuid)
@@ -62,9 +45,9 @@
             (create-metadata
              uid
              "./test-resources/metadata-one-valid.csv"))
-        message "unauthorised"
+        message "incorrect type"
         groups (random-uuid-set)]
     (when-success dr
-      (send-collection-request-cmd uid message groups (get-in dr [:body ::ms/id]))
+      (send-request-cmd uid message groups (get-in dr [:body ::ms/id]))
       (let [event (wait-for-events uid :kixi.collect/collection-request-rejected)]
-        (is (= :incorrect-type (:kixi.event.collect.rejection/reason event)))))))
+        (is (= :incorrect-type (:kixi.collect.request.rejection/reason event)))))))

@@ -1,6 +1,7 @@
 (ns kixi.collect.system
   (:require [aero.core :as aero]
             [clojure.java.io :as io]
+            [medley.core :as med]
             [com.stuartsierra.component
              :as
              component]
@@ -9,20 +10,22 @@
              [log :as kixi-log]]
             [kixi.comms.components.kinesis :as kinesis]
             [kixi.comms.components.coreasync :as coreasync]
-            [kixi.collect.collector :as c]
+            [kixi.collect.request.aggregate.dynamodb :as cra-dynamodb]
+            [kixi.collect.campaign.aggregate.dynamodb :as ca-dynamodb]
             [kixi.collect.web :as w]
             [taoensso.timbre :as log]))
 
 (defn config
   "Read EDN config, with the given profile. See Aero docs at
   https://github.com/juxt/aero for details."
-  [profile]
-  (aero/read-config (io/resource "config.edn") {:profile profile}))
+  [config-location profile]
+  (aero/read-config (io/resource config-location) {:profile profile}))
 
 (def component-dependencies
-  {:collect [:communications]
-   :communications []
-   :web []})
+  {:communications []
+   :web []
+   :collect-request-aggregate [:communications]
+   :campaign-aggregate [:communications]})
 
 (defn new-system-map
   [config]
@@ -30,8 +33,11 @@
    :communications (case (first (keys (:communications config)))
                      :kinesis (kinesis/map->Kinesis {})
                      :coreasync (coreasync/map->CoreAsync {}))
-   :collect (c/map->CollectAndShare (select-keys config [:directory]))
-   :web (w/map->Web {})))
+   :web (w/map->Web {})
+   :collect-request-aggregate (case (first (keys (:collect-request-aggregate config)))
+                                :dynamodb (cra-dynamodb/map->DynamoDbAggregate (select-keys config [:directory])))
+   :campaign-aggregate (case (first (keys (:campaign-aggregate config)))
+                         :dynamodb (ca-dynamodb/map->DynamoDbAggregate (select-keys config [:directory])))))
 
 (defn raise-first
   "Updates the keys value in map to that keys current first value"
@@ -44,10 +50,16 @@
   system starting). This is a pattern described in
   https://juxt.pro/blog/posts/aero.html"
   [system config profile]
-  (merge-with merge
-              system
-              (-> config
-                  (raise-first :communications))))
+  (->> (-> config
+           (raise-first :communications)
+           (raise-first :collect-request-aggregate)
+           (raise-first :campaign-aggregate))
+       ;;
+       (med/map-vals #(if (map? %)
+                        (assoc % :profile (name profile))
+                        %))
+       (merge-with merge
+                   system)))
 
 (defn configure-logging
   [config]
@@ -66,8 +78,8 @@
       (comms/set-verbose-logging! true))))
 
 (defn new-system
-  [profile]
-  (let [config (config profile)]
+  [config-location profile]
+  (let [config (config config-location profile)]
     (configure-logging config)
     (-> (new-system-map config)
         (configure-components config profile)

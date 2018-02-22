@@ -1,19 +1,29 @@
 (ns kixi.collect.bootstrap
   (:require [kixi.collect.system]
+            [kixi.collect.application :as application]
             [com.stuartsierra.component :as component]
-            [taoensso.timbre :as log])
+            [taoensso.timbre :as log]
+            [signal.handler :refer [with-handler]])
   (:gen-class))
 
-(defn -main 
+(defn -main
   [& args]
   (let [config-profile (keyword (first args))
-        system (kixi.collect.system/new-system config-profile)]
+        config-location (or (second args) "config.edn")
+        _ (reset! application/profile config-profile)
+        _ (reset! application/config-location config-location)
+        system (kixi.collect.system/new-system config-location config-profile)]
     (.addShutdownHook
      (Runtime/getRuntime)
-     (Thread. #(component/stop-system system)))
+     (Thread. #(do (component/stop-system system)
+                   (reset! application/system nil)
+                   (reset! application/profile nil))))
     (try
-      (component/start-system system)
+      (reset! application/system
+              (component/start-system system))
       (.. (Thread/currentThread) join)
       (catch Throwable t
-                 (log/error t "Top level exception caught")))))
-
+        (log/error t "Top level exception caught")))
+    (with-handler :term
+      (log/info "SIGTERM was caught: shutting down...")
+      (component/stop system))))

@@ -2,8 +2,6 @@
  ;;:local-args #include "local.edn"
  :web #profile {:local {:port 8083
                         :request-logging? true}
-                :staging-integration {:port 8083
-                                      :request-logging? true}
                 :staging-jenkins {:port 8083
                                   :request-logging? true}
                 :staging {:port 18093
@@ -27,6 +25,10 @@
                    :sns "arn:aws:sns:eu-west-1:720433613167:prod-witan-to-slack"
                    :dynamodb-endpoint #or [#env DYNAMODB_ENDPOINT "http://dynamodb.eu-west-1.amazonaws.com"]
                    :kinesis-endpoint #or [#env KINESIS_ENDPOINT "https://kinesis.eu-west-1.amazonaws.com"]}}
+ :dynamodb #profile {:local {:endpoint #or [#env DYNAMODB "http://localhost:38000"]}
+                     :staging-jenkins {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}
+                     :staging {:endpoint ^:ref [:aws :eu-central-1 :dynamodb-endpoint]}
+                     :prod {:endpoint ^:ref [:aws :eu-west-1 :dynamodb-endpoint]}}
  :directory {:heimdall #profile {:local {:host #or [#env HEIMDALL_HOST "localhost"]
                                          :port #or [#env HEIMDALL_PORT 3002]}
                                  :default {:host "kixi.heimdall.marathon.mesos"
@@ -37,6 +39,15 @@
                                             :port 18080}
                                   :test {:host #or [#env DATASTORE_HOST "localhost"]
                                          :port #or [#env DATASTORE_PORT 38001]}}}
+ :collect-request-aggregate {:dynamodb ^:ref [:dynamodb]}
+ :campaign-aggregate {:dynamodb ^:ref [:dynamodb]}
+ :alerts #profile {:default {:alerts? false}
+                   :staging {:region ^:ref [:aws :eu-central-1 :region]
+                             :sns  ^:ref [:aws :eu-central-1 :sns]
+                             :alerts? true}
+                   :prod {:region ^:ref [:aws :eu-west-1 :region]
+                          :sns  ^:ref [:aws :eu-west-1 :region]
+                          :alerts? true}}
  :communications #profile {:local {:kinesis {:profile "local"
                                              :app ^:ref [:service-name]
                                              :endpoint ^:ref [:aws :eu-central-1 :kinesis-endpoint]
