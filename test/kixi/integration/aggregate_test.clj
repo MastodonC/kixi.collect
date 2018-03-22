@@ -20,12 +20,12 @@
         message :not-a-string
         groups (random-uuid-set)]
     (when-success dr
-      (stest/unstrument)
+      #_(stest/unstrument)
       (binding [comms/*validate-commands* false]
         (send-request-cmd uid message groups (get-in dr [:body ::ms/id])))
       (let [event (wait-for-events uid :kixi.collect/collection-request-rejected)]
         (is (= :invalid-cmd (:kixi.collect.request.rejection/reason event))))
-      (stest/instrument))))
+      #_(stest/instrument))))
 
 (deftest collect-request-unauthorised-1
   (let [uid (uuid)
