@@ -520,6 +520,7 @@
                     (get-in metadata [::ms/sharing ::ms/meta-update]))
          uid (get-in metadata [::ms/provenance :kixi.user/id])]
      (send-datapack-cmd ugroup metadata)
+     (println "Waiting for datapack event..." uid)
      (let [event (wait-for-events uid :kixi.datastore.file-metadata/rejected :kixi.datastore.file-metadata/updated)]
        (println "Datapack event received:" (get-in event [:kixi.comms.event/payload
                                                           ::ms/file-metadata
