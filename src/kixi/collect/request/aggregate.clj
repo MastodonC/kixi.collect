@@ -148,7 +148,7 @@
           ::cr/created-at (or (:kixi.event/created-at event) (t/timestamp))
           ::cr/requester-id (:kixi.user/id sender)
           ::cr/responder-id g-id
-          ::cr/response-ids #{}
+          ::cr/response-ids #{} ;; TODO what's this?
           ::ms/id (::ms/id event)})
        group-collection-requests))
 
