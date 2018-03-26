@@ -5,7 +5,15 @@
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
             [clojure.spec.gen.alpha :as gen]
-            [clojure.test.check :as tc]))
+            [clojure.test.check :as tc]
+            [kixi.collect.definitions :refer [event-type-version-pair]]))
+
+(defmacro is-spec
+  [spec r]
+  `(do
+     (println "Checking spec validity " ~spec " V: " ~r)
+     (is (s/valid? ~spec ~r)
+         (str (s/explain-data ~spec ~r)))))
 
 (defn check
   ([sym]
@@ -16,3 +24,7 @@
        first
        stest/abbrev-result
        :failure)))
+
+(defn generate-event
+  [t v]
+  (gen/generate (s/gen (s/and :kixi/event #(= [t v] (event-type-version-pair %))))))

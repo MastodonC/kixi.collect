@@ -66,22 +66,26 @@
         :args (s/cat :dir (s/keys)
                      :label-bundle (s/or :nil-bundle nil?
                                          :bundle ::ms/file-metadata)
-                     :label-command (s/or :invalid-cmd :kixi/command
-                                          :valid-cmd (s/and :kixi/command
-                                                            #(= [:kixi.collect/request-collection "1.0.0"]
-                                                                (command-type-version-pair %)))))
+                     :label-command (s/and :kixi/command
+                                           #(= [:kixi.collect/request-collection "1.0.0"]
+                                               (command-type-version-pair %))))
         :fn (fn [{{:keys [label-command label-bundle]} :args
                   {:keys [event options]} :ret}]
-              (let [[_ command] label-command
+              (let [{:keys [kixi/user] :as command} label-command
                     [_ bundle] label-bundle]
                 (if (::ms/id command)
                   (and (= (::ms/id command)
                           (::ms/id event)
                           (:partition-key options))
                        (if (not bundle) (= :unauthorised (::c-reject/reason event))
-                           (if (not (datastore/bundle? bundle))
-                             (= :incorrect-type (::c-reject/reason event))
-                             (= :kixi.collect/collection-requested (::event/type event)))))
+                           (cond (not (datastore/has-activity? bundle user ::ms/meta-update))
+                                 (= :unauthorised (::c-reject/reason event))
+
+                                 (not (datastore/bundle? bundle))
+                                 (= :incorrect-type (::c-reject/reason event))
+
+                                 :else
+                                 (= :kixi.collect/collection-requested (::event/type event)))))
                   (and (rejected-event? event)
                        (= :invalid-cmd (::c-reject/reason event))))))
         :ret (s/cat :event ::event/payload
@@ -93,6 +97,9 @@
     (cond
       (not bundle)
       (reject-request :unauthorised id)
+
+      (not (datastore/has-activity? bundle user ::ms/meta-update))
+      (reject-request :unauthorised id "meta-update is required")
 
       (not (datastore/bundle? bundle))
       (reject-request :incorrect-type id)
@@ -141,7 +148,7 @@
           ::cr/created-at (or (:kixi.event/created-at event) (t/timestamp))
           ::cr/requester-id (:kixi.user/id sender)
           ::cr/responder-id g-id
-          ::cr/response-ids #{}
+          ::cr/response-ids #{} ;; TODO what's this?
           ::ms/id (::ms/id event)})
        group-collection-requests))
 

@@ -12,6 +12,7 @@
             [kixi.comms.components.coreasync :as coreasync]
             [kixi.collect.request.aggregate.dynamodb :as cra-dynamodb]
             [kixi.collect.campaign.aggregate.dynamodb :as ca-dynamodb]
+            [kixi.collect.process-manager.collection-request.dynamodb :as pmcr-dynamodb]
             [kixi.collect.web :as w]
             [taoensso.timbre :as log]))
 
@@ -25,7 +26,8 @@
   {:communications []
    :web []
    :collect-request-aggregate [:communications]
-   :campaign-aggregate [:communications]})
+   :campaign-aggregate [:communications]
+   :process-manager-collection-request [:communications]})
 
 (defn new-system-map
   [config]
@@ -37,7 +39,9 @@
    :collect-request-aggregate (case (first (keys (:collect-request-aggregate config)))
                                 :dynamodb (cra-dynamodb/map->DynamoDbAggregate (select-keys config [:directory])))
    :campaign-aggregate (case (first (keys (:campaign-aggregate config)))
-                         :dynamodb (ca-dynamodb/map->DynamoDbAggregate (select-keys config [:directory])))))
+                         :dynamodb (ca-dynamodb/map->DynamoDbAggregate (select-keys config [:directory])))
+   :process-manager-collection-request (case (first (keys (:process-manager-collection-request config)))
+                                         :dynamodb (pmcr-dynamodb/map->DynamoDbCollectionRequestProcessManager (select-keys config [:directory])))))
 
 (defn raise-first
   "Updates the keys value in map to that keys current first value"
@@ -53,7 +57,8 @@
   (->> (-> config
            (raise-first :communications)
            (raise-first :collect-request-aggregate)
-           (raise-first :campaign-aggregate))
+           (raise-first :campaign-aggregate)
+           (raise-first :process-manager-collection-request))
        ;;
        (med/map-vals #(if (map? %)
                         (assoc % :profile (name profile))

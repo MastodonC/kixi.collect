@@ -213,20 +213,27 @@
 (defn query
   [conn table pks projection]
   (->> (far/query conn table
-                  (map-vals #(vector "eq" %) pks)
-                  {:return (doall (mapv dynamo-col projection))
+                  (->> pks
+                       (map-vals #(vector "eq" %))
+                       (map-keys dynamo-col))
+                  {:return (if projection (doall (mapv dynamo-col projection)) :all-attributes)
                    :consistent? true})
        (map (comp inflate-map (partial map-keys name)))))
 
 (defn query-index
-  [conn table index pks projection sort-order]
-  (->> (far/query conn table
-                  (map-vals #(vector "eq" %) pks)
-                  {:return (doall (mapv dynamo-col projection))
-                   :consistent? true
-                   :order sort-order
-                   :index index})
-       (map (comp inflate-map (partial map-keys name)))))
+  ([conn table index pks projection sort-order]
+   (query-index conn table index pks projection sort-order nil))
+  ([conn table index pks projection sort-order opts]
+   (->> (far/query conn table
+                   (->> pks
+                        (map-vals #(vector "eq" %))
+                        (map-keys dynamo-col))
+                   (merge {:return (if projection (doall (mapv dynamo-col projection)) :all-attributes)
+                           :consistent? true
+                           :order sort-order
+                           :index index}
+                          opts))
+        (map (comp inflate-map (partial map-keys name))))))
 
 (defn insert
   [conn table rows]

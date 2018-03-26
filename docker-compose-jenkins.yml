@@ -1,7 +1,7 @@
 dynamodb:
         image: rajatvig/dynalite-alpine
         ports:
-          - '38000:8000'
+          - '39000:8000'
 ##
 datastore:
         image: 'mastodonc/kixi.datastore:latest'
@@ -23,5 +23,21 @@ datastore:
           - ENVIRONMENT=local-kinesis
           - VHOST=localhost
           - PORT=38001
+        env_file:
+          - aws-variables.env
+
+mailer:
+        image: 'mastodonc/kixi.mailer:latest'
+        volumes_from:
+          - "dynamodb"
+        links:
+          - dynamodb:dynamodb
+        environment:
+          - CONFIG_PROFILE=local
+          - ENVIRONMENT=local
+          - DYNAMODB=http://dynamodb:8000
+          - COMMAND_STREAM=test-jenkins-kixi-collect-command
+          - EVENT_STREAM=test-jenkins-kixi-collect-event
+          - DRY_RUN=true
         env_file:
           - aws-variables.env

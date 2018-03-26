@@ -21,6 +21,12 @@
   [{:keys [kixi.datastore.metadatastore/type]}]
   (= "bundle" type))
 
+(defn has-activity?
+  [md {:keys [kixi.user/groups]} activity]
+  (not (empty? (clojure.set/intersection
+                (set (get-in md [::ms/sharing activity]))
+                (set groups)))))
+
 (s/fdef get-metadata
         :args (s/cat :user :kixi/user
                      :directory (s/keys)

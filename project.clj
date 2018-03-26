@@ -15,16 +15,17 @@
                  [com.rpl/specter "1.0.3"]
                  [com.taoensso/timbre "4.8.0"]
                  [de.ubercode.clostache/clostache "1.4.0"]
-                 [kixi/kixi.comms "0.2.35" :upgrade :kixi]
+                 [kixi/kixi.comms "0.2.37" :upgrade :kixi]
                  [kixi/kixi.log "0.1.6" :upgrade :kixi]
                  [kixi/kixi.metrics "0.4.1" :upgrade :kixi]
                  [kixi/joplin.core "0.3.10-SNAPSHOT" :upgrade :kixi]
                  [kixi/joplin.dynamodb "0.3.10-SNAPSHOT" :upgrade :kixi]
-                 [kixi/kixi.spec "0.1.18" :upgrade :kixi]
+                 [kixi/kixi.spec "0.1.24" :upgrade :kixi]
                  [medley "1.0.0"]
                  [org.clojure/clojure "1.9.0"]
                  [spootnik/signal "0.2.1"]
-                 [yada/lean "1.2.2"]]
+                 [yada/lean "1.2.2"]
+                 [automat "0.2.4"]]
   :repl-options {:init-ns user}
   :global-vars {*warn-on-reflection* true
                 *assert* false}
