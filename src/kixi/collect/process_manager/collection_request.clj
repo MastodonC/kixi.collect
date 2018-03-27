@@ -15,6 +15,7 @@
             [automat.viz :refer [view]]))
 
 (ks/alias 'cr 'kixi.collect.request)
+(ks/alias 'cc 'kixi.collect.campaign)
 (ks/alias 'ms 'kixi.datastore.metadatastore)
 
 (defn uuid
@@ -139,7 +140,7 @@
   [state {:keys [:kixi.group/id]} _]
   [{:kixi.command/type :kixi.mailer/send-group-mail
     :kixi.command/version "1.0.0"
-    :kixi.mailer/source "support@mastodonc.com"
+    :kixi.mailer/source "witan@mastodonc.com"
     :kixi.mailer/destination {:kixi.mailer.destination/to-groups #{id}}
     :kixi.mailer/message {:kixi.mailer.message/subject (str "You've been invited to contribute to a Datapack")
                           :kixi.mailer.message/body
@@ -175,17 +176,17 @@
 
 (defn complete-process
   [last-action end-actions state event backend]
-  (let [bid (get-in state [:value ::batch-id])
+  (let [cid (get-in state [:value ::cc/id])
         cr-id (get-in state [:value ::cr/id])
-        brs (pm/get-batch backend bid)
+        brs (pm/get-batch backend cid)
         batch-rows (conj brs (assoc (some #(when (= cr-id (::cr/id %)) %) brs)
                                     ::action (name last-action)))]
     (when (batch-complete? end-actions batch-rows)
-      (log/info (str "Collection Request process was completed (batch " bid ")"))
+      (log/info (str "Collection Request process was completed (campaign " cid ")"))
       [(merge {:kixi.command/type :kixi.collect.process-manager.collection-request/complete-process
                :kixi.command/version "1.0.0"}
-              (select-keys (:value state) [::batch-id]))
-       {:partition-key bid}])))
+              (select-keys (:value state) [::cc/id]))
+       {:partition-key cid}])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Machine
@@ -265,8 +266,9 @@
   [backend]
   (fn [{:keys [::cr/group-collection-requests
                ::cr/message
-               ::cr/sender] :as event}]
-    (let [start-state {::batch-id (uuid)
+               ::cr/sender
+               ::cc/id] :as event}]
+    (let [start-state {::cc/id id
                        ::cr/ids (vec (vals group-collection-requests))
                        ::cr/message message
                        ::cr/sender sender}]
@@ -281,13 +283,12 @@
 
 (defn handle-complete-process-command
   [end-actions backend command]
-  (let [bid (::batch-id command)
-        batch-rows (pm/get-batch backend bid)]
+  (let [cid (::cc/id command)
+        batch-rows (pm/get-batch backend cid)]
     (if (batch-complete? end-actions batch-rows)
-      (let [all-batch-results (pm/get-batch backend bid)
-            batch-result (first all-batch-results)
+      (let [batch-result (first batch-rows)
             state (pm/get-state backend batch-result)
-            grpd-crs (->> all-batch-results
+            grpd-crs (->> batch-rows
                           (group-by ::cr/id))
             cr->actions (map-vals #(set (map (comp keyword ::action) %)) grpd-crs)
             cr->groups (map-vals (comp :kixi.group/id
@@ -299,16 +300,16 @@
                  :kixi.event/version "1.0.0"}
                 (select-keys (:value state) [::cr/message
                                              ::cr/sender
-                                             ::batch-id])
+                                             ::cc/id])
                 {::cr/group-collection-requests groups->cr
                  ::results cr->actions})
-         {:partition-key bid}])
+         {:partition-key cid}])
       (do
-        (log/error "A Collection Request process tried to complete but failed: " bid)
+        (log/error "A Collection Request process tried to complete but failed: " cid)
         [(merge {:kixi.event/type :kixi.collect.process-manager.collection-request/complete-process-rejected
                  :kixi.event/version "1.0.0"}
-                (select-keys command [::batch-id]))
-         {:partition-key bid}]))))
+                (select-keys command [::cc/id]))
+         {:partition-key cid}]))))
 
 (defn register-event-handlers!
   [communications backend]

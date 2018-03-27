@@ -5,4 +5,4 @@
   (save-state! [this old-state new-state event new-id]))
 
 (defprotocol IProcessManagerCollectionRequestBackend
-  (get-batch [this batch-id]))
+  (get-batch [this campaign-id]))

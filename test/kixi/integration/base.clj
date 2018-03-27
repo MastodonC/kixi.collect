@@ -191,8 +191,10 @@
       (mapv (fn [c]
               (async/go-loop
                   [event (async/<! c)]
-                (println "...observing event " (or (:kixi.comms.event/key event)
-                                                   (:kixi.event/type event)) uid)
+                (when event
+                  (println "...observing event " (or (:kixi.comms.event/key event)
+                                                     (:kixi.event/type event)
+                                                     event) uid))
                 (if (and (event-for uid event)
                          (or (event-types (:kixi.comms.event/key event))
                              (event-types (:kixi.event/type event))))

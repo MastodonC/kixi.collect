@@ -40,7 +40,7 @@
 (defmethod comms/command-payload
   [:kixi.collect.process-manager.collection-request/complete-process "1.0.0"]
   [_]
-  (s/keys :req [::pmcr/batch-id]))
+  (s/keys :req [::cc/id]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -68,7 +68,7 @@
 (defmethod comms/event-payload
   [:kixi.collect.process-manager.collection-request/process-completed "1.0.0"]
   [_]
-  (s/keys :req [::pmcr/batch-id
+  (s/keys :req [::cc/id
                 ::pmcr/results
                 ::cr/message
                 ::cr/sender
@@ -77,7 +77,7 @@
 (defmethod comms/event-payload
   [:kixi.collect.process-manager.collection-request/complete-process-rejected "1.0.0"]
   [_]
-  (s/keys :req [::pmcr/batch-id]))
+  (s/keys :req [::cc/id]))
 
 
 

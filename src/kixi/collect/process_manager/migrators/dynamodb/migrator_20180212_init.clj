@@ -9,6 +9,7 @@
             [taoensso.timbre :as log]))
 
 (ks/alias 'pmcr 'kixi.collect.process-manager.collection-request)
+(ks/alias 'cc 'kixi.collect.campaign)
 
 (def primary-write-provision 10)
 (def primary-read-provision 10)
@@ -36,7 +37,7 @@
                        :block? true})
     (far/create-table conn
                       (crdb/batches-collection-request-process-manager-table-name profile)
-                      [(db/dynamo-col ::pmcr/batch-id) :s]
+                      [(db/dynamo-col ::cc/id) :s]
                       {:range-keydef [(db/dynamo-col ::pmcr/id) :s]
                        :throughput {:read batches-read-provision
                                     :write batches-write-provision}
