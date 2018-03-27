@@ -86,4 +86,13 @@
                                            ::pmcr/created-at t
                                            ::cr/ids (get-in new-state [:value ::cr/ids])
                                            ::cr/id (get-in new-state [:value ::cr/id])
-                                           ::pmcr/action (get-in new-state [:value ::pmcr/action])})))))
+                                           ::pmcr/action (get-in new-state [:value ::pmcr/action])}))))
+  (clean-up! [this event]
+    (let [table (primary-collection-request-process-manager-table-name profile)
+          batches-table (batches-collection-request-process-manager-table-name profile)
+          cc-id (-> event ::cc/id)
+          batch-results (pm/get-batch this cc-id)]
+      (run! (fn [r]
+              (db/delete-item client table (select-keys r [::pmcr/id]))
+              (db/delete-item client batches-table (select-keys r [::pmcr/id ::cc/id])))
+            batch-results))))

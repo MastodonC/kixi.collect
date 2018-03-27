@@ -77,6 +77,5 @@
     component)
   agrr/ICollectionRequestAggregate
   (get-by-id [this id]
-    (update
-     (db/get-item {:endpoint endpoint} (primary-collection-request-table profile) ::cr/id id)
-     ::cr/response-ids set)))
+    (when-let [r (db/get-item {:endpoint endpoint} (primary-collection-request-table profile) ::cr/id id)]
+      (update r ::cr/response-ids set))))

@@ -12,7 +12,7 @@
 
 (def collection-request-aggregate (atom nil))
 
-(use-fixtures :once
+(use-fixtures :each
   (cycle-system-fixture {:spec {:kixi.event/type #{:kixi.collect/collection-requested}}})
   (extract-component :collect-request-aggregate collection-request-aggregate)
   extract-comms)
@@ -25,6 +25,6 @@
       ;; check the collection-requests made it into the aggregate
       (is (= :kixi.collect/collection-requested (:kixi.event/type event)))
       (doseq [cr-id (vals (::cr/group-collection-requests event))]
-        (let [cr (agr/get-by-id @collection-request-aggregate cr-id)]
+        (let [cr (wait-for-pred #(agr/get-by-id @collection-request-aggregate cr-id))]
           (is (s/valid? ::cr/db-item cr)
               (with-out-str (s/explain ::cr/db-item cr))))))))

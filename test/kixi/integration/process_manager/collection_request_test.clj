@@ -2,6 +2,7 @@
   {:integration true}
   (:require [kixi.collect.process-manager.collection-request :as pmcr]
             [kixi.collect.process-manager :as pm]
+            [kixi.collect.application :as app]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
             [clojure.spec.alpha :as s]
@@ -10,6 +11,7 @@
             [taoensso.faraday :as far]))
 
 (sh/alias 'ms 'kixi.datastore.metadatastore)
+(sh/alias 'cc 'kixi.collect.campaign)
 
 (def pmcr (atom nil))
 
@@ -24,12 +26,18 @@
         groups (random-uuid-set 3)]
     (when-let [event (send-collection-request uid message groups)]
       (let [pmevent (wait-for-events uid :kixi.collect.process-manager.collection-request/process-completed)]
-        (is (= :kixi.collect.process-manager.collection-request/process-completed
-               (:kixi.event/type pmevent)))
-        (is (= (:kixi.collect.request/group-collection-requests event)
-               (:kixi.collect.request/group-collection-requests pmevent)))
-        (is (every? #(= #{:update-sharing-permission :send-group-email :complete} %)
-                    (vals (:kixi.collect.process-manager.collection-request/results pmevent))))))))
+        (testing "Did the process manager complete properly?"
+          (is (= :kixi.collect.process-manager.collection-request/process-completed
+                 (:kixi.event/type pmevent)))
+          (is (= (:kixi.collect.request/group-collection-requests event)
+                 (:kixi.collect.request/group-collection-requests pmevent)))
+          (is (every? #(= #{:update-sharing-permission :send-group-email :complete} %)
+                      (vals (:kixi.collect.process-manager.collection-request/results pmevent)))))
+        (testing "Are the PMCR DB rows cleaned up?"
+          (doseq [pmcr-id (keys (:kixi.collect.process-manager.collection-request/results pmevent))]
+            (is (wait-for-pred #(nil? (pm/get-state @pmcr {::pmcr/id pmcr-id}))))))
+        (testing "Are the batch DB rows cleaned up?"
+          (is (wait-for-pred #(empty? (pm/get-batch @pmcr (::cc/id pmevent))))))))))
 
 (deftest sad-process-manager-1
   (let [uid (uuid)
