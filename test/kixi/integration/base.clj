@@ -562,7 +562,7 @@
   ([uid message groups]
    (send-collection-request uid uid message groups))
   ([uid uid2 message groups]
-   (println "Creating datapack...")
+   (println "Creating datapack for" uid)
    (let [dr (empty-datapack uid)]
      (when-success dr
        (println "Datapack created")

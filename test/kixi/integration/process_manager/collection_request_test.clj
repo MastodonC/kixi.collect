@@ -13,7 +13,7 @@
 
 (def pmcr (atom nil))
 
-(use-fixtures :once
+(use-fixtures :each
   (cycle-system-fixture {:spec {:kixi.event/type #{:kixi.collect/collection-requested}}})
   (extract-component :process-manager-collection-request pmcr)
   extract-comms)
