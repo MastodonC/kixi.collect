@@ -11,6 +11,7 @@
             [taoensso.timbre :as log]))
 
 (ks/alias 'cr 'kixi.collect.request)
+(ks/alias 'cc 'kixi.collect.campaign)
 
 (defn primary-collection-request-process-manager-table-name
   [profile]
@@ -31,9 +32,9 @@
     [communications profile endpoint directory
      client]
   pm/IProcessManagerCollectionRequestBackend
-  (get-batch [this batch-id]
+  (get-batch [this campaign-id]
     (db/query client (batches-collection-request-process-manager-table-name profile)
-              {::pmcr/batch-id batch-id}
+              {::cc/id campaign-id}
               nil))
   component/Lifecycle
   (start [component]
@@ -74,13 +75,13 @@
     ;; write new
     (let [table (primary-collection-request-process-manager-table-name profile)
           batches-table (batches-collection-request-process-manager-table-name profile)]
-      (let [batch-id (get-in new-state [:value ::pmcr/batch-id])
+      (let [cid (get-in new-state [:value ::cc/id])
             t (ct/timestamp)
             new-item (assoc new-state
                             ::pmcr/id new-id
                             ::pmcr/created-at t)]
         (db/put-item client table new-item)
-        (db/put-item client batches-table {::pmcr/batch-id batch-id
+        (db/put-item client batches-table {::cc/id cid
                                            ::pmcr/id new-id
                                            ::pmcr/created-at t
                                            ::cr/ids (get-in new-state [:value ::cr/ids])
