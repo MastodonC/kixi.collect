@@ -286,8 +286,7 @@
   (let [cid (::cc/id command)
         batch-rows (pm/get-batch backend cid)]
     (if (batch-complete? end-actions batch-rows)
-      (let [batch-result (first batch-rows)
-            state (pm/get-state backend batch-result)
+      (let [state (pm/get-state backend (first batch-rows))
             grpd-crs (->> batch-rows
                           (group-by ::cr/id))
             cr->actions (map-vals #(set (map (comp keyword ::action) %)) grpd-crs)
@@ -310,6 +309,11 @@
                  :kixi.event/version "1.0.0"}
                 (select-keys command [::cc/id]))
          {:partition-key cid}]))))
+
+(defn handle-process-completed-event
+  [backend event]
+  (log/info "Cleaning up batch" (::cc/id event))
+  (pm/clean-up! backend event))
 
 (defn register-event-handlers!
   [communications backend]
@@ -349,4 +353,11 @@
    :kixi.collect/collection-request-process-manager-group-mail-rejected-event
    :kixi.mailer/group-mail-rejected
    "1.0.0"
-   (partial advance-state-machine! backend)))
+   (partial advance-state-machine! backend))
+  ;;
+  (c/attach-validating-event-handler!
+   communications
+   :kixi.collect/collection-request-process-manager-process-completed
+   :kixi.collect.process-manager.collection-request/process-completed
+   "1.0.0"
+   (partial handle-process-completed-event backend)))

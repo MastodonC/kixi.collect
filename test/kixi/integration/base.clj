@@ -183,6 +183,21 @@
                         :kixi.datastore.metadatastore/provenance
                         :kixi.user/id]))))
 
+(defn wait-for-pred
+  ([p]
+   (wait-for-pred p wait-tries))
+  ([p tries]
+   (wait-for-pred p tries wait-per-try))
+  ([p tries ms]
+   (loop [try tries]
+     (when (and (pos? try))
+       (let [result (p)]
+         (if (not result)
+           (do
+             (Thread/sleep ms)
+             (recur (dec try)))
+           result))))))
+
 (defn wait-for-events
   [uid & event-types]
   (let [event-types (set event-types)]
