@@ -1,6 +1,7 @@
-(ns kixi.unit.process-manager.collection-request-test
+(ns kixi.unit.process-manager.collection-request-impl-test
   {:unit true}
-  (:require [kixi.collect.process-manager.collection-request :as pmcr :refer :all]
+  (:require [kixi.collect.process-manager.collection-request :as pmcr]
+            [kixi.collect.process-manager.collection-request-impl :refer :all]
             [kixi.collect.process-manager :as pm]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]

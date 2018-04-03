@@ -2,10 +2,10 @@
   (:require [clojure.spec.alpha :as s]
             [kixi.spec :refer [alias]]
             [kixi.spec.conformers :as sc]
-            [kixi.collect.definitions]
+            [kixi.collect.campaign.spec]
             [kixi.collect.datastore :as datastore]
             [kixi.collect.aggregate :as agr]
-            [kixi.collect.definitions :refer [event-type-version-pair]]))
+            [kixi.spec :refer [event-dispatch]]))
 
 (alias 'event 'kixi.event)
 (alias 'cr 'kixi.collect.request)
@@ -24,7 +24,7 @@
 (s/fdef process-collection-requested-event
         :args (s/cat :event (s/and :kixi/event
                                    #(= [:kixi.collect/collection-requested "1.0.0"]
-                                       (event-type-version-pair %))))
+                                       (event-dispatch %))))
         :fn (fn [{{:keys [event]} :args
                   db-item :ret}]
               (and (= (::cc/id event) (::cc/id db-item))
@@ -50,7 +50,7 @@
 ;;
 
 (defmulti process-event
-  (fn [_ e] (event-type-version-pair e)))
+  (fn [_ e] (event-dispatch e)))
 
 (defmethod process-event
   [:kixi.collect/collection-requested "1.0.0"]

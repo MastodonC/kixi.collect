@@ -1,8 +1,7 @@
-(ns kixi.collect.process-manager.collection-request
+(ns kixi.collect.process-manager.collection-request-impl
   (:require [clojure.spec.alpha :as s]
-            [kixi.collect.process-manager.collection-request.spec]
             [kixi.collect.process-manager :as pm]
-            [kixi.collect.definitions :refer [event-type-version-pair command-type-version-pair]]
+            [kixi.collect.process-manager.collection-request.spec]
             [kixi.comms :as c]
             [kixi.mailer :as m]
             [kixi.mailer.reject :as mr]
@@ -17,6 +16,7 @@
 (ks/alias 'cr 'kixi.collect.request)
 (ks/alias 'cc 'kixi.collect.campaign)
 (ks/alias 'ms 'kixi.datastore.metadatastore)
+(ks/alias 'pmcr 'kixi.collect.process-manager.collection-request)
 
 (defn uuid
   []
@@ -121,7 +121,7 @@
 (defn get-db-id
   [m]
   (or (get m :kixi.command/id)
-      (get m ::id)))
+      (get m ::pmcr/id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Create Commands
@@ -158,7 +158,7 @@
 
 (s/fdef batch-complete?
         :args (s/cat :end-actions state-machine-end-actions
-                     :orig-batch-results (s/coll-of ::batch :distinct true))
+                     :orig-batch-results (s/coll-of ::pmcr/batch :distinct true))
         :ret boolean?)
 
 (defn batch-complete?
@@ -167,7 +167,7 @@
         grpd-batch-results (group-by ::cr/id orig-batch-results)
         batch-results (->> grpd-batch-results
                            (vals)
-                           (map #(set (map (comp keyword ::action) %))))]
+                           (map #(set (map (comp keyword ::pmcr/action) %))))]
     (and
      (pos? (count batch-results))
      (pos? (count requests-in-batch))
@@ -180,7 +180,7 @@
         cr-id (get-in state [:value ::cr/id])
         brs (pm/get-batch backend cid)
         batch-rows (conj brs (assoc (some #(when (= cr-id (::cr/id %)) %) brs)
-                                    ::action (name last-action)))]
+                                    ::pmcr/action (name last-action)))]
     (when (batch-complete? end-actions batch-rows)
       (log/info (str "Collection Request process was completed (campaign " cid ")"))
       [(merge {:kixi.command/type :kixi.collect.process-manager.collection-request/complete-process
@@ -205,7 +205,7 @@
    :fail (partial complete-process :fail state-machine-end-actions)})
 
 (def action-reducers
-  (reduce (fn [a v] (assoc a v (fn [a' _] (assoc a' ::action v))))
+  (reduce (fn [a v] (assoc a v (fn [a' _] (assoc a' ::pmcr/action v))))
           {} (keys action-value->command-fn)))
 
 (s/fdef extract-command-event-signal
@@ -248,7 +248,7 @@
      (when (or old-state start-state)
        (let [{:keys [value] :as new-state} (a/advance compiled-state-machine (or old-state start-state) event)
              new-cmd-id (uuid)
-             action-value (::action value)
+             action-value (::pmcr/action value)
              action-fn (get action-value->command-fn action-value)
              action-result-cmd (when action-fn
                                  (add-id-to-cmd
@@ -289,7 +289,7 @@
       (let [state (pm/get-state backend (first batch-rows))
             grpd-crs (->> batch-rows
                           (group-by ::cr/id))
-            cr->actions (map-vals #(set (map (comp keyword ::action) %)) grpd-crs)
+            cr->actions (map-vals #(set (map (comp keyword ::pmcr/action) %)) grpd-crs)
             cr->groups (map-vals (comp :kixi.group/id
                                        :value
                                        (partial pm/get-state backend)
@@ -301,7 +301,7 @@
                                              ::cr/sender
                                              ::cc/id])
                 {::cr/group-collection-requests groups->cr
-                 ::results cr->actions})
+                 ::pmcr/results cr->actions})
          {:partition-key cid}])
       (do
         (log/error "A Collection Request process tried to complete but failed: " cid)

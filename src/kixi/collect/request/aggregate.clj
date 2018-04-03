@@ -3,15 +3,16 @@
             [kixi.spec :refer [alias]]
             [kixi.spec.conformers :as sc]
             [kixi.comms.time :as t]
-            [kixi.collect.definitions :refer [event-type-version-pair command-type-version-pair]]
+            [kixi.spec :refer [event-dispatch command-dispatch]]
             [kixi.collect.datastore :as datastore]
-            [kixi.collect.aggregate :as agr]))
+            [kixi.collect.aggregate :as agr]
+            [kixi.collect.request.spec]))
 
 (alias 'event 'kixi.event)
 (alias 'command 'kixi.command)
 (alias 'cr 'kixi.collect.request)
 (alias 'cc 'kixi.collect.campaign)
-(alias 'c-reject 'kixi.collect.request.rejection)
+(alias 'c-reject 'kixi.collect.request.reject)
 (alias 'ms 'kixi.datastore.metadatastore)
 
 (defn uuid
@@ -60,7 +61,7 @@
 (defn rejected-event?
   [event]
   (= [:kixi.collect/collection-request-rejected "1.0.0"]
-     (event-type-version-pair event)))
+     (event-dispatch event)))
 
 (s/fdef create-request-collection-handler-inner
         :args (s/cat :dir (s/keys)
@@ -68,7 +69,7 @@
                                          :bundle ::ms/file-metadata)
                      :label-command (s/and :kixi/command
                                            #(= [:kixi.collect/request-collection "1.0.0"]
-                                               (command-type-version-pair %))))
+                                               (command-dispatch %))))
         :fn (fn [{{:keys [label-command label-bundle]} :args
                   {:keys [event options]} :ret}]
               (let [{:keys [kixi/user] :as command} label-command
@@ -136,7 +137,7 @@
 ;; EVENTS
 
 (defmulti process-event
-  (fn [_ e] (event-type-version-pair e)))
+  (fn [_ e] (event-dispatch e)))
 
 (defmethod process-event
   [:kixi.collect/collection-requested "1.0.0"]
@@ -148,7 +149,7 @@
           ::cr/created-at (or (:kixi.event/created-at event) (t/timestamp))
           ::cr/requester-id (:kixi.user/id sender)
           ::cr/responder-id g-id
-          ::cr/response-ids #{} ;; TODO what's this?
+          ::cr/response-ids #{}'
           ::ms/id (::ms/id event)})
        group-collection-requests))
 

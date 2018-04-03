@@ -8,17 +8,6 @@
 (alias 'cc 'kixi.collect.campaign)
 (alias 'ms 'kixi.datastore.metadatastore)
 
-(s/def ::cr/id sc/uuid?)
-(s/def ::cr/ids (s/coll-of ::cr/id :distinct true))
-(s/def ::cr/message sc/not-empty-string)
-(s/def ::cr/groups  (s/coll-of :kixi.group/id))
-(s/def ::cr/sender :kixi/user)
-(s/def ::cr/created-at sc/timestamp?)
-
-;; Event
-(s/def ::cr/group-collection-requests
-  (s/map-of sc/uuid? sc/uuid?)) ;; group-id (k), collection-request-id (v)
-
 ;; Db
 (s/def ::cr/requester-id sc/uuid?)
 (s/def ::cr/responder-id sc/uuid?)
@@ -30,7 +19,7 @@
                 ::cr/created-at
                 ::cr/requester-id
                 ::cr/responder-id ;; group
-                ::cr/response-ids
+                ::cr/response-ids ;; store ids to response rows ... rip rdbs. Should eventually point to ::response/id
                 ::ms/id]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

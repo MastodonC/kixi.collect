@@ -12,7 +12,7 @@
 
 (def campaign-aggregate (atom nil))
 
-(use-fixtures :once
+(use-fixtures :each
   (cycle-system-fixture {:spec {:kixi.event/type #{:kixi.collect/collection-requested}}})
   (extract-component :campaign-aggregate campaign-aggregate)
   extract-comms)
@@ -23,6 +23,6 @@
         groups (random-uuid-set)]
     (when-let [event (send-collection-request uid message groups)]
       ;; check the campaign made it into the aggregate
-      (let [c (agc/get-by-id @campaign-aggregate (::cc/id event))]
+      (let [c (wait-for-pred #(agc/get-by-id @campaign-aggregate (::cc/id event)))]
         (is (s/valid? ::cc/db-item c)
             (with-out-str (s/explain ::cc/db-item c)))))))
