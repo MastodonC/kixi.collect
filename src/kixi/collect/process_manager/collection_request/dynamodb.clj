@@ -2,6 +2,7 @@
   (:require [com.stuartsierra.component :as component]
             [kixi.collect.dynamodb :as db]
             [kixi.collect.process-manager.collection-request :as pmcr]
+            [kixi.collect.process-manager.collection-request-impl :as pmcr-i]
             [kixi.collect.process-manager :as pm]
             [clojure.spec.alpha :as s]
             [kixi.comms :as comms]
@@ -53,7 +54,7 @@
             cmp (assoc component :client client)]
         (db/migrate :env joplin-conf)
         ;;
-        (pmcr/register-event-handlers! communications cmp)
+        (pmcr-i/register-event-handlers! communications cmp)
         ;;
         cmp)
       component))
@@ -62,7 +63,7 @@
     component)
   pm/IProcessManagerBackend
   (get-state [this event]
-    (let [id (or (pmcr/get-db-id event))
+    (let [id (or (pmcr-i/get-db-id event))
           r (not-empty (db/query client
                                  (primary-collection-request-process-manager-table-name profile)
                                  {::pmcr/id id}

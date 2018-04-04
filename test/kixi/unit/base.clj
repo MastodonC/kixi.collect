@@ -1,12 +1,11 @@
 (ns kixi.unit.base
-  (:require [kixi.collect.definitions]
-            [kixi.collect.test-spec]
+  (:require [kixi.collect.test-spec]
             [clojure.spec.alpha :as s]
             [clojure.test :refer :all]
             [clojure.spec.test.alpha :as stest]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test.check :as tc]
-            [kixi.collect.definitions :refer [event-type-version-pair]]))
+            [kixi.spec :refer [event-dispatch]]))
 
 (defmacro is-spec
   [spec r]
@@ -27,4 +26,4 @@
 
 (defn generate-event
   [t v]
-  (gen/generate (s/gen (s/and :kixi/event #(= [t v] (event-type-version-pair %))))))
+  (gen/generate (s/gen (s/and :kixi/event #(= [t v] (event-dispatch %))))))

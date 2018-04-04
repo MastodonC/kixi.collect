@@ -3,7 +3,7 @@
             [kixi.collect.dynamodb :as db]
             [kixi.collect.campaign.aggregate :as agrc]
             [kixi.collect.aggregate :as agr]
-            [kixi.collect.definitions :refer [event-type-version-pair]]
+            [kixi.spec :refer [event-dispatch]]
             [clojure.spec.alpha :as s]
             [kixi.comms :as comms]
             [kixi.spec.conformers :as sc]
@@ -20,7 +20,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmulti handle-event
-  (fn [_ e] (event-type-version-pair e)))
+  (fn [_ e] (event-dispatch e)))
 
 (defmethod handle-event
   [:kixi.collect/collection-requested "1.0.0"]

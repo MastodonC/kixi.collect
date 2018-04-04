@@ -8,9 +8,6 @@
 (alias 'cc 'kixi.collect.campaign)
 (alias 'ms 'kixi.datastore.metadatastore)
 
-(s/def ::cc/id sc/uuid?)
-(s/def ::cc/created-at sc/timestamp?)
-
 ;; Db
 (s/def ::cc/db-item
   (s/keys :req [::cc/id

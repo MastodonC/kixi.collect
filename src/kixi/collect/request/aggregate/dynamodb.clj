@@ -1,7 +1,7 @@
 (ns kixi.collect.request.aggregate.dynamodb
   (:require [com.stuartsierra.component :as component]
             [kixi.collect.dynamodb :as db]
-            [kixi.collect.definitions :refer [event-type-version-pair]]
+            [kixi.spec :refer [event-dispatch]]
             [kixi.collect.request.aggregate :as agrr]
             [kixi.collect.aggregate :as agr]
             [clojure.spec.alpha :as s]
@@ -24,7 +24,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmulti handle-event
-  (fn [_ e] (event-type-version-pair e)))
+  (fn [_ e] (event-dispatch e)))
 
 (defmethod handle-event
   [:kixi.collect/collection-requested "1.0.0"]

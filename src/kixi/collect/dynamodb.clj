@@ -173,14 +173,12 @@
   ([conn table id-column id]
    (get-item conn table id-column id nil))
   ([conn table id-column id options]
-   (let [result (if options
-                  (far/get-item conn table {(dynamo-col id-column) id}
-                                (options->db-opts options))
-                  (far/get-item conn table {(dynamo-col id-column) id}
-                                {:consistent? true}))
-         inflated-result (inflate-map
-                          (map-keys name result))]
-     inflated-result)))
+   (when-let [result (if options
+                       (far/get-item conn table {(dynamo-col id-column) id}
+                                     (options->db-opts options))
+                       (far/get-item conn table {(dynamo-col id-column) id}
+                                     {:consistent? true}))]
+     (inflate-map (map-keys name result)))))
 
 (defn get-item-skeptical
   ([conn table id-column id]
