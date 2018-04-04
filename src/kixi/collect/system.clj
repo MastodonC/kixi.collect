@@ -1,5 +1,6 @@
 (ns kixi.collect.system
-  (:require [aero.core :as aero]
+  (:require [kixi.collect] ;; loads specs
+            [aero.core :as aero]
             [clojure.java.io :as io]
             [medley.core :as med]
             [com.stuartsierra.component
