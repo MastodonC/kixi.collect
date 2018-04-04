@@ -567,7 +567,8 @@
     {::cmd/type :kixi.collect/request-collection
      ::cmd/version "1.0.0"
      ::cr/message message
-     ::cr/groups groups
+     ::cr/requested-groups groups
+     ::cr/receiving-groups (vec-if-not ugroup)
      ::ms/id bid
      :kixi/user {:kixi.user/id uid
                  :kixi.user/groups (vec-if-not ugroup)}}

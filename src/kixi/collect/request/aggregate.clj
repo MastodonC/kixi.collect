@@ -48,13 +48,14 @@
     {:partition-key (or id (uuid))}]))
 
 (defn create-request
-  [{:keys [kixi/user ::cr/groups ::cr/message ::ms/id]}]
+  [{:keys [kixi/user ::cr/requested-groups ::cr/message ::ms/id ::cr/receiving-groups]}]
   [{::event/type :kixi.collect/collection-requested
     ::event/version "1.0.0"
     ::ms/id id
     ::cc/id (uuid)
     ::cr/message message
-    ::cr/group-collection-requests (zipmap groups (repeatedly uuid))
+    ::cr/group-collection-requests (zipmap requested-groups (repeatedly uuid))
+    ::cr/receiving-groups receiving-groups
     ::cr/sender user}
    {:partition-key id}])
 
@@ -94,7 +95,7 @@
 
 (defn create-request-collection-handler-inner
   [directory bundle cmd]
-  (let [{:keys [kixi/user ::cr/groups ::cr/message ::ms/id]} cmd]
+  (let [{:keys [kixi/user ::ms/id]} cmd]
     (cond
       (not bundle)
       (reject-request :unauthorised id)
