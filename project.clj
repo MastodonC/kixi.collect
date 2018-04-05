@@ -8,8 +8,11 @@
   :dependencies [[aero "1.0.0"]
                  [aleph "0.4.5-alpha4"]
                  [bidi "2.0.12"]
+                 [byte-streams "0.2.3"]
+                 [byte-transforms "0.1.4"]
                  [clj-http "3.7.0"]
                  [com.amazonaws/aws-java-sdk "1.11.253" :exclusions [joda-time]]
+                 [com.cognitect/transit-clj "0.8.290"]
                  [com.mastodonc/faraday "1.10.0" :exclusions [com.amazonaws/aws-java-sdk-dynamodb
                                                               com.taoensso/encore]]
                  [com.rpl/specter "1.0.3"]

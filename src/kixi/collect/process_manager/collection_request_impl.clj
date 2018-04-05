@@ -1,5 +1,6 @@
 (ns kixi.collect.process-manager.collection-request-impl
   (:require [clojure.spec.alpha :as s]
+            [kixi.collect.encode :as encode]
             [kixi.collect.process-manager :as pm]
             [kixi.collect.process-manager.collection-request.spec]
             [kixi.comms :as c]
@@ -11,7 +12,8 @@
             [medley.core :refer [map-vals]]
             [automat.core :as a]
             [automat.fsm :as fsm]
-            [automat.viz :refer [view]]))
+            [automat.viz :refer [view]]
+            [clostache.parser :as mustache]))
 
 (ks/alias 'cr 'kixi.collect.request)
 (ks/alias 'cc 'kixi.collect.campaign)
@@ -123,6 +125,17 @@
   (or (get m :kixi.command/id)
       (get m ::pmcr/id)))
 
+(defn resolve-sender
+  [sender]
+  "Foo bar")
+
+(defn generate-url
+  [{:keys [::cr/submit-route] :as state}]
+  (str submit-route "&" (-> state
+                            (select-keys [::cr/receiving-groups ::ms/id ::cc/id ::cr/id])
+                            (encode/transit-encode)
+                            (encode/base64-encode))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Create Commands
 
@@ -137,18 +150,22 @@
    {:partition-key id}])
 
 (defn create-send-group-email-command
-  [state {:keys [:kixi.group/id]} _]
-  [{:kixi.command/type :kixi.mailer/send-group-mail
-    :kixi.command/version "1.0.0"
-    :kixi.mailer/source "witan@mastodonc.com"
-    :kixi.mailer/destination {:kixi.mailer.destination/to-groups #{id}}
-    :kixi.mailer/message {:kixi.mailer.message/subject (str "You've been invited to contribute to a Datapack")
-                          :kixi.mailer.message/body
-                          {:kixi.mailer.message/text
-                           "<<&env.default_header>>This needs to be filled out.<<&env.default_footer>>"
-                           :kixi.mailer.message/html
-                           "<<&env.default_header>>This needs to be filled out.<<&env.default_footer>>"}}}
-   {:partition-key id}])
+  [{{:keys [::cr/message ::cr/sender] :as state} :value} {:keys [:kixi.group/id]} _]
+  (let [opts {:message message
+              :sender (resolve-sender sender)
+              :url (generate-url state)}
+        body-html (mustache/render-resource "emails/collection-request.html" opts)
+        body-txt (mustache/render-resource "emails/collection-request.txt" opts)
+        subject "Witan For Cities - You've been asked to contribute to a Datapack!"]
+    [{:kixi.command/type :kixi.mailer/send-group-mail
+      :kixi.command/version "1.0.0"
+      :kixi.mailer/source "witan@mastodonc.com"
+      :kixi.mailer/destination {:kixi.mailer.destination/to-groups #{id}}
+      :kixi.mailer/message {:kixi.mailer.message/subject subject
+                            :kixi.mailer.message/body
+                            {:kixi.mailer.message/text body-txt
+                             :kixi.mailer.message/html body-html}}}
+     {:partition-key id}]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
