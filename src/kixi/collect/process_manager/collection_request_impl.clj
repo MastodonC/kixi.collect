@@ -131,10 +131,10 @@
 
 (defn generate-url
   [{:keys [::cr/submit-route] :as state}]
-  (str submit-route "&" (-> state
-                            (select-keys [::cr/receiving-groups ::ms/id ::cc/id ::cr/id])
-                            (encode/transit-encode)
-                            (encode/base64-encode))))
+  (str submit-route (-> state
+                        (select-keys [::cr/receiving-groups ::ms/id ::cc/id ::cr/id])
+                        (encode/transit-encode)
+                        (encode/base64-encode))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Create Commands
