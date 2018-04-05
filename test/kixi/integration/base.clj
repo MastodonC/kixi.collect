@@ -567,6 +567,7 @@
     {::cmd/type :kixi.collect/request-collection
      ::cmd/version "1.0.0"
      ::cr/message message
+     ::cr/submit-route "/foobar"
      ::cr/requested-groups groups
      ::cr/receiving-groups (vec-if-not ugroup)
      ::ms/id bid
