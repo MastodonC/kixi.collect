@@ -1,0 +1,18 @@
+<<&env.default_header>>
+
+You have been invited to contribute to a Datapack on the Witan For Cities platform.
+
+Message:
+{{message}}
+
+To access the datapack and contribute your files (copy-and-paste into your browser):
+
+<<&env.base_url>>{{url}}
+
+If you experience any difficulty, please don't hesitate to contact us.
+
+Thanks,
+The Witan For Cities Team
+(Mastodon C)
+
+<<&env.default_footer>>
