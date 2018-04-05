@@ -20,7 +20,7 @@
                  [kixi/kixi.metrics "0.4.1" :upgrade :kixi]
                  [kixi/joplin.core "0.3.10-SNAPSHOT" :upgrade :kixi]
                  [kixi/joplin.dynamodb "0.3.10-SNAPSHOT" :upgrade :kixi]
-                 [kixi/kixi.spec "0.1.26" :upgrade :kixi]
+                 [kixi/kixi.spec "0.1.27" :upgrade :kixi]
                  [medley "1.0.0"]
                  [org.clojure/clojure "1.9.0"]
                  [spootnik/signal "0.2.1"]

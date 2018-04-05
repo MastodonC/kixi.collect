@@ -48,12 +48,13 @@
     {:partition-key (or id (uuid))}]))
 
 (defn create-request
-  [{:keys [kixi/user ::cr/requested-groups ::cr/message ::ms/id ::cr/receiving-groups]}]
+  [{:keys [kixi/user ::cr/requested-groups ::cr/message ::ms/id ::cr/receiving-groups ::cr/submit-route]}]
   [{::event/type :kixi.collect/collection-requested
     ::event/version "1.0.0"
     ::ms/id id
     ::cc/id (uuid)
     ::cr/message message
+    ::cr/submit-route submit-route
     ::cr/group-collection-requests (zipmap requested-groups (repeatedly uuid))
     ::cr/receiving-groups receiving-groups
     ::cr/sender user}

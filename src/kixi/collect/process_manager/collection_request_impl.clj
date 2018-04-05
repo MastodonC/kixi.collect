@@ -264,14 +264,17 @@
 
 (defn start-collection-requests!
   [backend]
-  (fn [{:keys [::cr/group-collection-requests
-               ::cr/message
-               ::cr/sender
-               ::cc/id] :as event}]
-    (let [start-state {::cc/id id
-                       ::cr/ids (vec (vals group-collection-requests))
-                       ::cr/message message
-                       ::cr/sender sender}]
+  (fn [{:keys [::cr/group-collection-requests] :as event}]
+    (let [start-state
+          (merge {::cr/ids (vec (vals group-collection-requests))}
+                 (select-keys event [::cc/id
+                                     ::cr/message
+                                     ::cr/submit-route
+                                     ::cr/sender
+                                     ::ms/id
+                                     ::cr/receiving-groups]))]
+      ;; NOTE don't include ::cr/group-collection-requests in state because it upsets dynamo layer
+      ;; and it's easy to reconstruct later
       (mapv (fn [[group-id collection-request-id]]
               (advance-state-machine!
                backend
@@ -297,9 +300,12 @@
             groups->cr (zipmap (vals cr->groups) (keys cr->groups))]
         [(merge {:kixi.event/type :kixi.collect.process-manager.collection-request/process-completed
                  :kixi.event/version "1.0.0"}
-                (select-keys (:value state) [::cr/message
+                (select-keys (:value state) [::cc/id
+                                             ::cr/message
                                              ::cr/sender
-                                             ::cc/id])
+                                             ::cr/submit-route
+                                             ::cr/receiving-groups
+                                             ::ms/id])
                 {::cr/group-collection-requests groups->cr
                  ::pmcr/results cr->actions})
          {:partition-key cid}])
