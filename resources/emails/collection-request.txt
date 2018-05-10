@@ -5,11 +5,15 @@ You have been invited to contribute to a Datapack on the Witan For Cities platfo
 Message:
 {{message}}
 
-To access the datapack and contribute your files (copy-and-paste into your browser):
+Please ensure that the file you'd like to contribute is uploaded to Witan. You can upload files here:
+
+<<&env.base_url>>/#/app/data/create
+
+To access the datapack and contribute your files, please use the following address:
 
 <<&env.base_url>>{{url}}
 
-If you experience any difficulty, please don't hesitate to contact us.
+You can contact us via in-app help or at witan@mastodonc.com.
 
 Thanks,
 The Witan For Cities Team
