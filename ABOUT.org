@@ -1,0 +1,332 @@
+* kixi.collect
+
+**** June 2018
+
+/This document assumes familiarity with the Witan architecture, CQRS and event-sourcing./
+
+*kixi.collect* (aka 'Collect') is the service concerned with the process of collecting data files on behalf of users and putting them into the relevant Datapacks
+and sharing them with the relevant groups. It is a contributor to the "Collect+Share" feature, part of the Witan Suite.
+
+It is a traditional 'microservice' as the term has become recognised inside Mastodon C. It connects to and participates in the wider CQRS/ES system and actually
+adheres to this pattern more strictly than most other services. For example, it better represents the concept of '[[http://cqrs.wikidot.com/doc:aggregate][aggregates]]' and in fact has several inside the
+service. It also introduces the idea of 'Sagas', which is a pattern used when coordinating business logic across a series of Command->Event (often chained)
+exchanges. It actually uses a design for the Saga pattern known as a '[[https://docs.microsoft.com/en-us/previous-versions/msp-n-p/jj591569(v=pandp.10)][process manager]]'.
+
+The C+S feature/service introduces some new domain abstractions: Collection Requests and Campaigns.
+
+To paint a picture, it helps to understand the user journey and where these abstractions come into play. Imagine the following:
+
+/Alice works for a Local Education Authority. She requires an annual pupil attendance document from each of the 20 schools in her area. She knows that Witan's
+Collect+Share feature will enable her to contact each school and request the document./
+
+1. Alice creates a new Datapack called 'Pupil Attendance 2018'. She shares it with her LEA's group.
+2. Alice goes to the 'Collect' screen.
+3. She searches for the groups for each of the schools and adds them to the recipients list.
+4. She types in a message to ensure the school's administrators will understand which document she needs, and in which format.
+5. She indicates that their results will be shared with her LEA group.
+6. She clicks 'Send' -- the request is sent.
+
+In the example, Alice sent the request to 20 separate schools - more specifically, the groups for those schools. Alice has created a '*Collection Request*' between
+her LEA group, who will receive the document, and each of the school groups the request was sent to; therefore 20 separate '*Collection Requests*' have been
+created. These 20 *Collection Requests* are bound together in a single *Campaign*. One *Campaign* has many *Collection Requests*.
+
+*Collection Requests* can be used for individual response tracking and schema reporting.
+*Campaigns* retain information about the original request, such as ~sender~ and ~message~ and can be used to delineate multiple requests to the same group.
+
+You can see more examples here: [[https://docs.google.com/document/d/1sPoFDL0gi0htYiBGb8zh8pCtE9hTINJuYU53dynBTsY][https://docs.google.com/document/d/1sPoFDL0gi0htYiBGb8zh8pCtE9hTINJuYU53dynBTsY]]
+
+** History
+
+Even though it shares a name, the ~kixi.collect~ service is just part of the overall "Collect+Share" feature. There were three originally designed phases to
+the feature:
+
+1. Collection of files into datapacks
+2. Response tracking
+3. Schema reporting
+
+~kixi.collect~ is designed to achieve the first two phases but only to facilitate the third, which will be mainly handled by a separate 'schema checking' service.
+
+** Component Diagrams
+
+*** System Overview
+
+#+BEGIN_SRC plantuml :file docs/components.png :results silent
+package "Witan Cluster" {
+  [kixi.collect] #LightGreen
+  [witan.gateway]
+}
+
+cloud {
+  [witan.ui] #Pink
+}
+
+node "AWS" {
+
+database "kinesis" {
+  [streams]
+}
+
+database "dynamodb" {
+  [tables]
+}
+
+database "s3" {
+  [file bucket]
+}
+
+}
+
+User -> [witan.ui]
+[witan.ui] -> [witan.gateway]
+[witan.gateway] -> [streams] #Green
+[witan.gateway] -[hidden]-> [kixi.collect]
+[streams] -> [witan.gateway] #Blue
+[streams] -> [kixi.collect] #Blue
+[kixi.collect] -> [streams] #Green
+[kixi.collect] -> [tables]
+[witan.ui] -> [file bucket]
+#+END_SRC
+
+[[file:docs/components.png]]
+
+The above diagram illustrates Collect's dependencies (not including components that depend on Collect. witan.ui and witan.gateway are included to
+demonstrate how traffic flows in from the Internet).
+
+*** Application Overview
+
+#+BEGIN_SRC plantuml :file docs/application.png :results silent
+
+node "Witan Cluster" {
+  [kixi.datastore] #Orchid
+}
+
+package "kixi.collect" {
+  package "request" #LightGreen {
+    [::request/aggregate]
+    [::request.aggregate/dynamodb]
+    [::request/spec]
+  }
+  package "campaign" #LightBlue {
+    [::campaign/aggregate]
+    [::campaign.aggregate/dynamodb]
+    [::campaign/spec]
+  }
+  package "process-manager" #Pink {
+    [::process-manager/collection-request-impl]
+    [::process-manager.collection-request/dynamodb]
+    [::process-manager.collection-request/spec]
+  }
+  [::aggregate]
+  [::application]
+  [::bootstrap]
+  [::datastore]
+  [::dynamodb]
+  [::process-manager]
+  [::system]
+  [::web]
+}
+
+database "kinesis" {
+  [commands]
+  [events]
+}
+
+database "dynamodb" {
+  [tables]
+}
+
+' Connections
+[::bootstrap] --> [::application] : stores
+[::bootstrap] --> [::system]
+
+[::system] -> [::request.aggregate/dynamodb] : creates
+[::system] -> [::campaign.aggregate/dynamodb] : creates
+[::system] -> [::process-manager.collection-request/dynamodb] : creates
+[::system] -> [::web] : creates
+
+[::campaign.aggregate/dynamodb] .> [::campaign/aggregate] : implements
+[::request.aggregate/dynamodb] .> [::request/aggregate] : implements
+[::process-manager.collection-request/dynamodb] ..> [::process-manager] : implements
+
+[::campaign.aggregate/dynamodb] --> [::dynamodb] : uses
+[::request.aggregate/dynamodb] --> [::dynamodb] : uses
+[::process-manager.collection-request/dynamodb] --> [::dynamodb] : uses
+
+[::aggregate] <-- [::campaign.aggregate/dynamodb]  : uses
+[::request.aggregate/dynamodb] --> [::aggregate] : uses
+
+[::campaign/spec] .> [::campaign/aggregate] : informs
+[::request/spec] .> [::request/aggregate] : informs
+[::process-manager.collection-request/spec] .> [::process-manager/collection-request-impl] : informs
+[::process-manager.collection-request/dynamodb] -> [::process-manager/collection-request-impl] : uses
+
+[::request/aggregate] -> [::datastore] : uses
+[::datastore] --> [kixi.datastore] : http
+
+[::dynamodb] -right-> [tables]
+
+[events] --> [::campaign.aggregate/dynamodb] #Blue : receives
+[events] --> [::request.aggregate/dynamodb] #Blue : receives
+[events] <--> [::process-manager/collection-request-impl] #Blue : receives
+
+[commands] --> [::request.aggregate/dynamodb] #Green : receives
+[commands] <--> [::process-manager/collection-request-impl] #Green : sends & receives
+
+[::process-manager/collection-request-impl] -[hidden]> [commands]
+
+
+' Hidden Connections
+[::process-manager] -[hidden]-> [::aggregate]
+[commands] -[hidden]-> [kixi.datastore]
+
+#+END_SRC
+
+[[file:docs/application.png]]
+
+The above diagram shows a more detailed layout of Collect's internal application design.
+
+PlantUML has done a bad job of laying out the parts and although the design looks a little more displaced than other services it's actually one of the
+most consistent and compartmentalised. Notice how the two aggregate components are identical in form - spec, base functions, backend implementation.
+
+** Component Summary
+
+This section aims to address each of the high-level components currently being used by Collect. As well as the usual System component, there are two
+aggregates - [Collection] Request and Campaign - and one process manager, /also called/ Collection Request. At a glance the naming convention looks confusing but once
+namespaces are applied it's much easier to grok.
+
+Before talking about the specific aggregates, it's worth talking about the design pattern that they both follow. Attempts were made to abstract, as much
+as possible, the actions of an aggregate, in order that we might provide a common interface. Perhaps predictably, this resulted in just two methods: ~get~ and
+~put!~. Effort was also made to ensure that aggregate processing could stand up to 'the reduce test' which is essentially a test to imagine whether the
+interface for the aggregate would cope if the event stream that it consumes was replaced with a reduce function (this is a core desire of event sourcing).
+Therefore ~get~ and ~put!~ represent actions every aggregate would have to do inside a ~reduce~ loop in order to safely apply each event.
+
+~kixi.collect.aggregate~ has provided an interface and helper functions to ensure implementing aggregates make use of this style. Specifically, the
+function ~aggregate-event-handler-inner~ demonstrates how aggregates are used as an event comes into the system.
+
+*** System
+
+| Key Namespaces               | Desciption                                                              |
+|------------------------------+-------------------------------------------------------------------------|
+| kixi.collect.aggregate       | Protocol definition and helper functions for IAggregateEventDataHandler |
+| kixi.collect.application     | System atoms                                                            |
+| kixi.collect.bootstrap       | The application entry point; adds exception handlers and loads system   |
+| kixi.collect.datastore       | Functions for querying the Datastore via HTTP                           |
+| kixi.collect.dynamodb        | Wrapper functions for dealing with DynamoDB                             |
+| kixi.collect.process-manager | Protocols for process manager types                                     |
+| kixi.collect.system          | Sets up and starts all the Components                                   |
+| kixi.collect.web             | Tiny webserver which provides health checking                           |
+
+The System component describes all the parts of the Datastore essential to getting it up and running.
+As with all the Witan microservices, it uses [[https://github.com/stuartsierra/component][Stuart sierra's Component library]] to manage the start-up of service components and [[https://github.com/juxt/aero][Juxt's Aero]] to provide
+parameterised and environment-aware configuration.
+
+Once reified, the system can be accessed via a selection of atoms in the ~kixi.collect.application~ namespace.
+
+The system layout of ~kixi.collect~ is a good one to adopt for other services - protocols and helper functions at the top level, implementations in their
+own specific namespaces.
+
+*** Aggregate - [Collection] Request
+
+| Key Namespaces                          | Desciption                                                         |
+|-----------------------------------------+--------------------------------------------------------------------|
+| kixi.collect.request.aggregate          | Matches sequences of commands and events against domain activities |
+| kixi.collect.request.aggregate.dynamodb | Matches sequences of commands and events against domain activities |
+| kixi.collect.request.spec               |                                                                    |
+
+As previously stated, the Request aggregate follows the style of aggregates set out in ~kixi.collect.aggregate~. The ~kixi.collect.request.aggregate~
+namespace implements the business logic for Requests separately from the backend namespace ~kixi.collect.request.aggregate.dynamodb~. In fact, the
+code in the ~dynamodb~ namespace is minimal and /could be reduced further/ by removing all the event handler hookups. See ~handle-event~ function for
+an example of the ~IAggregateEventDataHandler~ interface.
+
+~kixi.collect.request.aggregate~ also includes code for command handlers. It's debatable whether this code really belongs to the aggregate, or instead
+the process manager or another entity entirely. For example, both the Campaign and Request aggregate care equally about the events generated as a resulted
+of the command, so it's unclear why the Request aggregate specifically is responsible for handling the commands related to it.
+
+*** Aggregate - Campaign
+
+| Key Namespaces                          | Desciption                                                         |
+|-----------------------------------------+--------------------------------------------------------------------|
+| kixi.collect.campaign.aggregate          | Matches sequences of commands and events against domain activities |
+| kixi.collect.campaign.aggregate.dynamodb | Matches sequences of commands and events against domain activities |
+| kixi.collect.campaign.spec               |                                                                    |
+
+The Campaign aggregate also follows the style of aggregates set out in ~kixi.collect.aggregate~. The ~kixi.collect.campaign.aggregate~
+namespace implements the business logic for Campaigns separately from the backend namespace ~kixi.collect.campaign.aggregate.dynamodb~. As with the
+Request aggregate, the code in the ~dynamodb~ namespace is minimal and /could be reduced further/ by removing all the event handler hookups.
+
+Unlike Request aggregate there are no commands handlers. See comments above.
+
+**** Process Manager - Collection Request
+
+| Key Namespaces                                           | Desciption                                                         |
+|----------------------------------------------------------+--------------------------------------------------------------------|
+| kixi.collect.process-manager.collection-request-impl     | Matches sequences of commands and events against domain activities |
+| kixi.collect.process-manager.collection-request.dynamodb | Matches sequences of commands and events against domain activities |
+| kixi.collect.process-manager.collection-request.spec     |                                                                    |
+
+To clarify, process managers are responsible for observing events and issuing commands in response, in a specific pattern. In the case of Collection
+Request process manager [[https://github.com/ztellman/automat][automat]] was used to represent this state machine. In hindsight, this was a complex way to represent what turned out to be only
+a three-step process - there are simpler solutions. A lot of the code in ~kixi.collect.process-manager.collection-request-impl~ is dedicated to working
+with ~automat~ and its constraints. Either way though, there is also a lot of boiler plate for hooking up event handlers for every possible event
+that can occur in the state machine (five).
+
+This particular process manager is responsible for receiving a collection request command and ensuring that the Datapack has the appropriate permissions
+set for the relevant group (command to the Datastore) and that an email is sent to all the members of that group (command to the Mailer).
+
+For every "Collection Request" entity as described in the introduction to this document, there is a "process manager state" persisted. In the example
+there were 20 schools and so there would be a process manager state for each school. These states are actually immutable which means every time a state
+is "advanced" in reality an entirely new state is created. Detecting whether a Campaign ("batch" in process manager parlance) has completed becomes an
+exercise of checking each state in a Campaign (has a particular Campaign ID) and seeing whether particular 'end states' (usually `:complete` or `:fail`)
+have been reached for a particular Collection Request.
+
+The process manager system obviously follows a slightly different pattern to that of the aggregates, in terms of how it's put together. It uses its
+database was less predictably and therefore more logic exists in ~kixi.collect.process-manager.collection-request.dynamodb~, although there are still
+interfaces in place.
+
+*** Migrations
+
+Components are encouraged to manage database migrations themselves which is why you will see ~migrators~ directories for aggregates and process manager.
+We universally use Joplin for our migrations and the config is created by the component itself, rather than kept as a resource. This can be observed in
+the ~start~ method of any of the components.
+
+*** Testing
+
+~kixi.collect~ does testing fairly well. There is a decent balance of unit tests and integration tests, and the unit tests that are there feature some
+/generative/ tests, based on clojure.spec and quickcheck - worth sussing out.
+
+The integration tests for the aggregates are fairly straight forward - fire off an event and observe the aggregate respond in a particular way. Tests for
+the process manager are less conclusive. Ideally you'd want to fully exhaust the state machine which these tests don't. Today there is a happy test and
+a test designed to fail in a predictable way.
+
+*** Honourable Mentions
+
+**** joplin
+
+~kixi.collect~ still uses a Mastodon C branch of ~joplin~ because, as far as I can tell, although a pull request was merged, a new version hasn't yet
+been released: https://github.com/juxt/joplin/pull/99.
+
+** Future
+
+*** Adding new features
+
+It's very likely that new features will be added to Collect at some point. The care should be at the data level, rather than implementation; the aggregate
+and process manager examples are decent enough that they can be copied and adapted.
+
+The features on the horizon for Collect+Share:
+
+**** Request Tracking
+
+Request tracking is half way there.
+- The Requests aggregate simply needs to set a flag once a file is uploaded to a particular datapack; the collection request ID and campaign ID are sent to the UI in the URL when users are emailed with a C+S link. The UI, rather than adjust the datapack directly, should do it (send a command) via ~kixi.collect~ so that the aggregate can update to indicate a file has been submit for that particular group. This might be a new process manager.
+- The ~kixi.collect.web~ namespace will need some work in order to support queries, probably by Datapack ID and/or Campaign ID.
+
+**** Schema Checking
+
+There is already plans for a schema service, which will take a request from somewhere (maybe ~kixi.collect~, maybe the UI?) and will compare a file to a
+schema (schema as defined however that services ends up doing so). The result of that check needs sending out as an event, picking up by the Collect service
+and adding as a field to the Request aggregate row - possibly a link to the report ID so that ~witan.gateway~ can look up the result?
+
+*** Long-term plan
+
+Honestly, unknown. The service is still fresh and in good working order so there are no big changes to be made beyond the feature additions that are
+planned.
